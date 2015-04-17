@@ -25,6 +25,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Strings.isNullOrEmpty;
 
 public class StatementSplitter
 {
@@ -33,11 +34,18 @@ public class StatementSplitter
 
     public StatementSplitter(String sql)
     {
-        this(sql, ImmutableSet.of(";"));
+        this(sql, ImmutableSet.of(";"), null);
     }
 
-    public StatementSplitter(String sql, Set<String> delimiters)
+    public StatementSplitter(String sql, Set<String> delimiters, String alternate)
     {
+        if (!isNullOrEmpty(alternate)) {
+            delimiters = ImmutableSet.<String>builder()
+                    .addAll(delimiters)
+                    .add(alternate)
+                    .build();
+        }
+        boolean useAlternate = false;
         TokenSource tokens = getLexer(sql, delimiters);
         ImmutableList.Builder<Statement> list = ImmutableList.builder();
         StringBuilder sb = new StringBuilder();
@@ -46,14 +54,21 @@ public class StatementSplitter
             if (token.getType() == Token.EOF) {
                 break;
             }
-            if (token.getType() == SqlBaseParser.DELIMITER) {
-                String statement = sb.toString().trim();
-                if (!statement.isEmpty()) {
-                    list.add(new Statement(statement, token.getText()));
+            if ((token.getType() == SqlBaseParser.DELIMITER) &&
+                    (!useAlternate || token.getText().equals(alternate))) {
+                if (token.getText().equals(alternate) && (sb.length() == 0)) {
+                    useAlternate = true;
                 }
-                sb = new StringBuilder();
+                else {
+                    String statement = sb.toString().trim();
+                    if (!statement.isEmpty()) {
+                        list.add(new Statement(statement, token.getText()));
+                    }
+                    sb = new StringBuilder();
+                    useAlternate = false;
+                }
             }
-            else {
+            else if ((sb.length() > 0) || !token.getText().trim().isEmpty()) {
                 sb.append(token.getText());
             }
         }

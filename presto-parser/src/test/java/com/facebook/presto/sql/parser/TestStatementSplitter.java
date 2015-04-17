@@ -80,9 +80,21 @@ public class TestStatementSplitter
     @Test
     public void testSplitterCustomDelimiters()
     {
-        String sql = "// select * from  foo // select * from t;//select * from ";
-        StatementSplitter splitter = new StatementSplitter(sql, ImmutableSet.of(";", "//"));
-        assertEquals(splitter.getCompleteStatements(), statements("select * from  foo", "//", "select * from t", ";"));
+        String sql = "" +
+                "| select * from  foo | select * from t;" +
+                ";  // function foo() begin; oops; end; //" +
+                "select hi;\n//\nbegin;\nfoo;\nbar;\nend //" +
+                "select abc; select foo // select bar|select * from";
+        StatementSplitter splitter = new StatementSplitter(sql, ImmutableSet.of(";", "|"), "//");
+        assertEquals(splitter.getCompleteStatements(), statements(
+                "select * from  foo", "|",
+                "select * from t", ";",
+                "function foo() begin; oops; end;", "//",
+                "select hi", ";",
+                "begin;\nfoo;\nbar;\nend", "//",
+                "select abc", ";",
+                "select foo", "//",
+                "select bar", "|"));
         assertEquals(splitter.getPartialStatement(), "select * from");
     }
 
