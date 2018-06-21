@@ -31,6 +31,7 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Properties;
 
+import static com.google.common.base.MoreObjects.toStringHelper;
 import static com.google.common.base.Strings.isNullOrEmpty;
 import static io.prestosql.client.KerberosUtil.defaultCredentialCachePath;
 import static io.prestosql.client.OkHttpUtil.basicAuth;
@@ -144,6 +145,19 @@ final class PrestoDriverUri
             throws SQLException
     {
         return EXTRA_CREDENTIALS.getValue(properties).orElse(ImmutableMap.of());
+    }
+
+    @Override
+    public String toString()
+    {
+        return toStringHelper(this)
+                .add("address", address)
+                .add("catalog", catalog)
+                .add("schema", schema)
+                .add("SSL", useSecureConnection)
+                .add("properties", properties)
+                .add("uri", uri)
+                .toString();
     }
 
     public void setupClient(OkHttpClient.Builder builder)

@@ -33,6 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import static com.google.common.base.Throwables.getStackTraceAsString;
 import static io.prestosql.jdbc.PrestoResultSet.resultsException;
 import static java.lang.Math.toIntExact;
 import static java.util.Objects.requireNonNull;
@@ -268,9 +269,11 @@ public class PrestoStatement
             return false;
         }
         catch (ClientException e) {
+            DriverLogger.log("execute failed: " + getStackTraceAsString(e));
             throw new SQLException(e.getMessage(), e);
         }
         catch (RuntimeException e) {
+            DriverLogger.log("execute failed: " + getStackTraceAsString(e));
             throw new SQLException("Error executing query", e);
         }
         finally {

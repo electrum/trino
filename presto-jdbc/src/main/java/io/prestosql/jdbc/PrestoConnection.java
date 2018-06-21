@@ -58,6 +58,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Strings.nullToEmpty;
+import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.collect.Maps.fromProperties;
 import static java.lang.String.format;
 import static java.nio.charset.StandardCharsets.US_ASCII;
@@ -632,6 +633,7 @@ public class PrestoConnection
                 serverInfo.set(queryExecutor.getServerInfo(httpUri));
             }
             catch (RuntimeException e) {
+                DriverLogger.log("getServerInfo failed: " + getStackTraceAsString(e));
                 throw new SQLException("Error fetching version from server", e);
             }
         }

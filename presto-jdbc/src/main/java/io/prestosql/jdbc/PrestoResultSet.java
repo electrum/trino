@@ -60,6 +60,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import static com.google.common.base.Throwables.getStackTraceAsString;
 import static com.google.common.base.Verify.verify;
 import static com.google.common.collect.Iterables.getOnlyElement;
 import static com.google.common.collect.Iterators.concat;
@@ -148,6 +149,7 @@ public class PrestoResultSet
             return true;
         }
         catch (RuntimeException e) {
+            DriverLogger.log("fetch next failed: " + getStackTraceAsString(e));
             if (e.getCause() instanceof SQLException) {
                 throw (SQLException) e.getCause();
             }

@@ -86,6 +86,7 @@ public class PrestoDriver
         }
 
         PrestoDriverUri uri = new PrestoDriverUri(url, info);
+        DriverLogger.log("connect: " + uri);
 
         OkHttpClient.Builder builder = httpClient.newBuilder();
         uri.setupClient(builder);
