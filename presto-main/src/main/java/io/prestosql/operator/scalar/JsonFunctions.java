@@ -56,6 +56,7 @@ import static com.fasterxml.jackson.core.JsonToken.VALUE_TRUE;
 import static com.fasterxml.jackson.databind.SerializationFeature.ORDER_MAP_ENTRIES_BY_KEYS;
 import static io.airlift.slice.Slices.utf8Slice;
 import static io.prestosql.spi.StandardErrorCode.INVALID_FUNCTION_ARGUMENT;
+import static io.prestosql.spi.function.OperatorType.CONSTRUCT;
 import static io.prestosql.spi.type.Chars.padSpaces;
 import static io.prestosql.util.JsonUtil.createJsonParser;
 import static io.prestosql.util.JsonUtil.truncateIfNecessaryForErrorMessage;
@@ -134,6 +135,7 @@ public final class JsonFunctions
         return slice;
     }
 
+    @ScalarOperator(CONSTRUCT)
     @ScalarFunction
     @LiteralParameters("x")
     @SqlType(StandardTypes.JSON)

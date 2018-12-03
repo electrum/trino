@@ -26,6 +26,9 @@ import org.testng.annotations.Test;
 import java.util.Optional;
 import java.util.Set;
 
+import static com.google.common.io.BaseEncoding.base16;
+import static io.airlift.slice.Slices.utf8Slice;
+import static io.airlift.slice.Slices.wrappedBuffer;
 import static io.prestosql.spi.function.OperatorType.EQUAL;
 import static io.prestosql.spi.function.OperatorType.GREATER_THAN;
 import static io.prestosql.spi.function.OperatorType.GREATER_THAN_OR_EQUAL;
@@ -53,13 +56,17 @@ import static io.prestosql.spi.type.VarcharType.VARCHAR;
 import static io.prestosql.spi.type.VarcharType.createUnboundedVarcharType;
 import static io.prestosql.spi.type.VarcharType.createVarcharType;
 import static io.prestosql.sql.analyzer.TypeSignatureProvider.fromTypes;
+import static io.prestosql.type.ColorType.COLOR;
+import static io.prestosql.type.IpAddressType.IPADDRESS;
 import static io.prestosql.type.JoniRegexpType.JONI_REGEXP;
 import static io.prestosql.type.JsonPathType.JSON_PATH;
+import static io.prestosql.type.JsonType.JSON;
 import static io.prestosql.type.LikePatternType.LIKE_PATTERN;
 import static io.prestosql.type.Re2JRegexpType.RE2J_REGEXP;
 import static io.prestosql.type.UnknownType.UNKNOWN;
 import static java.lang.String.format;
 import static java.util.Objects.requireNonNull;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -84,6 +91,29 @@ public class TestTypeRegistry
         catch (Throwable t) {
             fail("Expect to throw IllegalArgumentException, got " + t.getClass());
         }
+    }
+
+    @Test
+    public void testResolveConstructor()
+            throws Throwable
+    {
+        assertEquals(
+                typeRegistry.resolveConstructor(BIGINT)
+                        .invoke(utf8Slice("123")),
+                123L);
+
+        assertEquals(
+                typeRegistry.resolveConstructor(IPADDRESS)
+                        .invoke(utf8Slice("1.2.3.4")),
+                wrappedBuffer(base16().decode("00000000000000000000FFFF01020304")));
+
+        assertEquals(
+                typeRegistry.resolveConstructor(JSON)
+                        .invoke(utf8Slice("{ \"abc\": 123 }")),
+                utf8Slice("{\"abc\":123}"));
+
+        assertThatThrownBy(() -> typeRegistry.resolveConstructor(COLOR))
+                .hasMessageMatching("CAST to color cannot be applied to varchar");
     }
 
     @Test

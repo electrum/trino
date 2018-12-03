@@ -131,13 +131,8 @@ public final class LiteralInterpreter
                 throw new SemanticException(TYPE_MISMATCH, node, "Unknown type: " + node.getType());
             }
 
-            if (JSON.equals(type)) {
-                FunctionHandle functionHandle = metadata.getFunctionManager().lookupFunction(QualifiedName.of("json_parse"), fromTypes(VARCHAR));
-                return functionInvoker.invoke(functionHandle, session, ImmutableList.of(utf8Slice(node.getValue())));
-            }
-
             try {
-                FunctionHandle functionHandle = metadata.getFunctionManager().lookupCast(VARCHAR.getTypeSignature(), type.getTypeSignature());
+                FunctionHandle functionHandle = metadata.getFunctionManager().lookupConstructor(type.getTypeSignature());
                 return functionInvoker.invoke(functionHandle, session, ImmutableList.of(utf8Slice(node.getValue())));
             }
             catch (IllegalArgumentException e) {

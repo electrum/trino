@@ -129,6 +129,11 @@ public class FunctionManager
         return functionRegistry.lookupCast(fromType, toType);
     }
 
+    public FunctionHandle lookupConstructor(TypeSignature type)
+    {
+        return functionRegistry.lookupConstructor(type);
+    }
+
     public FunctionHandle lookupSaturatedFloorCast(TypeSignature fromType, TypeSignature toType)
     {
         return functionRegistry.lookupSaturatedFloorCast(fromType, toType);

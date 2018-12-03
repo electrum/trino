@@ -300,6 +300,7 @@ import static io.prestosql.spi.StandardErrorCode.AMBIGUOUS_FUNCTION_CALL;
 import static io.prestosql.spi.StandardErrorCode.FUNCTION_IMPLEMENTATION_MISSING;
 import static io.prestosql.spi.StandardErrorCode.FUNCTION_NOT_FOUND;
 import static io.prestosql.spi.type.TypeSignature.parseTypeSignature;
+import static io.prestosql.spi.type.VarcharType.VARCHAR;
 import static io.prestosql.sql.analyzer.TypeSignatureProvider.fromTypeSignatures;
 import static io.prestosql.sql.planner.LiteralEncoder.MAGIC_LITERAL_FUNCTION_PREFIX;
 import static io.prestosql.sql.planner.LiteralEncoder.getMagicLiteralFunctionSignature;
@@ -1081,6 +1082,21 @@ class FunctionRegistry
         catch (PrestoException e) {
             if (e.getErrorCode().getCode() == FUNCTION_IMPLEMENTATION_MISSING.toErrorCode().getCode()) {
                 throw new OperatorNotFoundException(OperatorType.CAST, ImmutableList.of(fromType), toType);
+            }
+            throw e;
+        }
+        return new FunctionHandle(signature);
+    }
+
+    public FunctionHandle lookupConstructor(TypeSignature type)
+    {
+        Signature signature = internalOperator(OperatorType.CONSTRUCT.name(), type, VARCHAR.getTypeSignature());
+        try {
+            getScalarFunctionImplementation(signature);
+        }
+        catch (PrestoException e) {
+            if (e.getErrorCode().getCode() == FUNCTION_IMPLEMENTATION_MISSING.toErrorCode().getCode()) {
+                return lookupCast(VARCHAR.getTypeSignature(), type);
             }
             throw e;
         }

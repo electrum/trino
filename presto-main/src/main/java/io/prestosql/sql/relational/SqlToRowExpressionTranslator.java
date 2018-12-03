@@ -67,7 +67,6 @@ import io.prestosql.sql.tree.NodeRef;
 import io.prestosql.sql.tree.NotExpression;
 import io.prestosql.sql.tree.NullIfExpression;
 import io.prestosql.sql.tree.NullLiteral;
-import io.prestosql.sql.tree.QualifiedName;
 import io.prestosql.sql.tree.Row;
 import io.prestosql.sql.tree.SearchedCaseExpression;
 import io.prestosql.sql.tree.SimpleCaseExpression;
@@ -92,6 +91,7 @@ import static io.airlift.slice.Slices.utf8Slice;
 import static io.prestosql.SystemSessionProperties.isLegacyRowFieldOrdinalAccessEnabled;
 import static io.prestosql.spi.function.OperatorType.BETWEEN;
 import static io.prestosql.spi.function.OperatorType.CAST;
+import static io.prestosql.spi.function.OperatorType.CONSTRUCT;
 import static io.prestosql.spi.function.OperatorType.NEGATION;
 import static io.prestosql.spi.function.OperatorType.SUBSCRIPT;
 import static io.prestosql.spi.type.BigintType.BIGINT;
@@ -120,7 +120,6 @@ import static io.prestosql.sql.relational.SpecialForm.Form.ROW_CONSTRUCTOR;
 import static io.prestosql.sql.relational.SpecialForm.Form.SWITCH;
 import static io.prestosql.sql.relational.SpecialForm.Form.WHEN;
 import static io.prestosql.sql.tree.ArrayConstructor.ARRAY_CONSTRUCTOR;
-import static io.prestosql.type.JsonType.JSON;
 import static io.prestosql.type.LikePatternType.LIKE_PATTERN;
 import static io.prestosql.util.DateTimeUtils.parseDayTimeInterval;
 import static io.prestosql.util.DateTimeUtils.parseTimeWithTimeZone;
@@ -257,14 +256,9 @@ public final class SqlToRowExpressionTranslator
         protected RowExpression visitGenericLiteral(GenericLiteral node, Void context)
         {
             Type type = getType(node);
-            if (JSON.equals(type)) {
-                FunctionHandle functionHandle = functionManager.lookupFunction(QualifiedName.of("json_parse"), fromTypes(VARCHAR));
-                return new CallExpression("json_parse", functionHandle, type, ImmutableList.of(constant(utf8Slice(node.getValue()), VARCHAR)));
-            }
-
             return new CallExpression(
-                    CAST.name(),
-                    functionManager.lookupCast(VARCHAR.getTypeSignature(), type.getTypeSignature()),
+                    CONSTRUCT.name(),
+                    functionManager.lookupConstructor(type.getTypeSignature()),
                     type,
                     ImmutableList.of(constant(utf8Slice(node.getValue()), VARCHAR)));
         }
