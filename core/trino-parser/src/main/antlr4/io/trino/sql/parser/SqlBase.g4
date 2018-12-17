@@ -278,7 +278,12 @@ sampleType
     ;
 
 aliasedRelation
-    : relationPrimary (AS? identifier columnAliases?)?
+    : relationPrimary relationAlias?                                        #namedRelation
+    | relationPrimary in=relationAlias? matchRecognize out=relationAlias?   #patternRelation
+    ;
+
+relationAlias
+    : AS? identifier columnAliases?
     ;
 
 columnAliases
@@ -461,6 +466,83 @@ frameBound
     | expression boundType=(PRECEDING | FOLLOWING)  #boundedFrame
     ;
 
+matchRecognize
+    : MATCH_RECOGNIZE '('
+        (PARTITION BY partition+=expression (',' partition+=expression)*)?
+        (ORDER BY sortItem (',' sortItem)*)?
+        (MEASURES matchMeasure (',' matchMeasure)*)?
+        rowsPerMatch?
+        (AFTER MATCH matchSkipTo)?
+        PATTERN '(' rowPattern ')'
+        (SUBSET matchSubset (',' matchSubset)*)?
+        DEFINE matchDefinition (',' matchDefinition)*
+      ')'
+    ;
+
+matchMeasure
+    : expression AS identifier
+    ;
+
+matchDefinition
+    : identifier AS expression
+    ;
+
+rowsPerMatch
+    : ONE ROW PER MATCH                         #oneRowPerMatch
+    | ALL ROWS PER MATCH emptyMatchHandling?    #allRowsPerMatch
+    ;
+
+emptyMatchHandling
+    : SHOW EMPTY MATCHES        #showEmptyMatches
+    | OMIT EMPTY MATCHES        #omitEmptyMatches
+    | WITH UNMATCHED ROWS       #withUnmatchedRows
+    ;
+
+matchSkipTo
+    : SKIP_ TO NEXT ROW              #skipToNextRow
+    | SKIP_ PAST LAST ROW            #skipPastLastRow
+    | SKIP_ TO FIRST identifier      #skipToFirst
+    | SKIP_ TO LAST? identifier      #skipToLast
+    ;
+
+matchSubset
+    : name=identifier EQ '(' names+=identifier (',' names+=identifier)* ')'
+    ;
+
+rowPattern
+    : rowPatternTerm ('|' rowPatternTerm)*
+    ;
+
+rowPatternTerm
+    : rowPatternFactor+
+    ;
+
+rowPatternFactor
+    : rowPatternPrimary rowPatternQuantifier?
+    ;
+
+rowPatternPrimary
+    : identifier                                    #matchIdentifier
+    | '$'                                           #matchStart
+    | '^'                                           #matchEnd
+    | '(' rowPattern? ')'                           #parenthesizedPattern
+    | '{-' rowPattern '-}'                          #excludedPattern
+    | PERMUTE '(' rowPattern (',' rowPattern)? ')'  #permutedPattern
+    ;
+
+rowPatternQuantifier
+    : ASTERISK reluctant?                                           #zeroOrMoreIterations
+    | PLUS reluctant?                                               #oneOrMoreIterations
+    | '?' reluctant?                                                #zeroOrOneIterations
+    | '{' min=INTEGER_VALUE ',' '}' reluctant?                      #atLeastIterations
+    | '{' ',' max=INTEGER_VALUE '}' reluctant?                      #atMostIterations
+    | '{' min=INTEGER_VALUE ',' max=INTEGER_VALUE '}' reluctant?    #betweenIterations
+    | '{' count=INTEGER_VALUE '}'                                   #exactIterations
+    ;
+
+reluctant
+    : '?'
+    ;
 
 explainOption
     : FORMAT value=(TEXT | GRAPHVIZ | JSON)                 #explainFormat
@@ -533,26 +615,26 @@ number
 
 nonReserved
     // IMPORTANT: this rule must only contain tokens. Nested rules are not supported. See SqlParser.exitNonReserved
-    : ADD | ADMIN | ALL | ANALYZE | ANY | ARRAY | ASC | AT | AUTHORIZATION
+    : ADD | ADMIN | AFTER | ALL | ANALYZE | ANY | ARRAY | ASC | AT | AUTHORIZATION
     | BERNOULLI
     | CALL | CASCADE | CATALOGS | COLUMN | COLUMNS | COMMENT | COMMIT | COMMITTED | CURRENT
-    | DATA | DATE | DAY | DEFINER | DESC | DISTRIBUTED | DOUBLE
-    | EXCLUDING | EXPLAIN
+    | DATA | DATE | DAY | DEFINE | DEFINER | DESC | DISTRIBUTED | DOUBLE
+    | EMPTY | EXCLUDING | EXPLAIN
     | FETCH | FILTER | FIRST | FOLLOWING | FORMAT | FUNCTIONS
     | GRANT | GRANTED | GRANTS | GRAPHVIZ | GROUPS
     | HOUR
     | IF | IGNORE | INCLUDING | INPUT | INTERVAL | INVOKER | IO | ISOLATION
     | JSON
     | LAST | LATERAL | LEVEL | LIMIT | LOGICAL
-    | MAP | MATERIALIZED | MINUTE | MONTH
+    | MAP | MATCH | MATCH_RECOGNIZE | MATCHES | MATERIALIZED | MEASURES | MINUTE | MONTH
     | NEXT | NFC | NFD | NFKC | NFKD | NO | NONE | NULLIF | NULLS
-    | OFFSET | ONLY | OPTION | ORDINALITY | OUTPUT | OVER
-    | PARTITION | PARTITIONS | PATH | POSITION | PRECEDING | PRECISION | PRIVILEGES | PROPERTIES
+    | OFFSET | OMIT | ONE | ONLY | OPTION | ORDINALITY | OUTPUT | OVER
+    | PARTITION | PARTITIONS | PAST | PATH | PATTERN | PER | PERMUTE | POSITION | PRECEDING | PRECISION | PRIVILEGES | PROPERTIES
     | RANGE | READ | REFRESH | RENAME | REPEATABLE | REPLACE | RESET | RESPECT | RESTRICT | REVOKE | ROLE | ROLES | ROLLBACK | ROW | ROWS
     | SCHEMA | SCHEMAS | SECOND | SECURITY | SERIALIZABLE | SESSION | SET | SETS
     | SHOW | SOME | START | STATS | SUBSTRING | SYSTEM
     | TABLES | TABLESAMPLE | TEXT | TIES | TIME | TIMESTAMP | TO | TRANSACTION | TRY_CAST | TYPE
-    | UNBOUNDED | UNCOMMITTED | USE | USER
+    | UNBOUNDED | UNCOMMITTED | UNMATCHED | USE | USER
     | VALIDATE | VERBOSE | VIEW
     | WITHOUT | WORK | WRITE
     | YEAR
@@ -561,6 +643,7 @@ nonReserved
 
 ADD: 'ADD';
 ADMIN: 'ADMIN';
+AFTER: 'AFTER';
 ALL: 'ALL';
 ALTER: 'ALTER';
 ANALYZE: 'ANALYZE';
@@ -599,6 +682,7 @@ DATA: 'DATA';
 DATE: 'DATE';
 DAY: 'DAY';
 DEALLOCATE: 'DEALLOCATE';
+DEFINE: 'DEFINE';
 DEFINER: 'DEFINER';
 DELETE: 'DELETE';
 DESC: 'DESC';
@@ -607,6 +691,7 @@ DISTINCT: 'DISTINCT';
 DISTRIBUTED: 'DISTRIBUTED';
 DOUBLE: 'DOUBLE';
 DROP: 'DROP';
+EMPTY: 'EMPTY';
 ELSE: 'ELSE';
 END: 'END';
 ESCAPE: 'ESCAPE';
@@ -661,7 +746,11 @@ LOCALTIME: 'LOCALTIME';
 LOCALTIMESTAMP: 'LOCALTIMESTAMP';
 LOGICAL: 'LOGICAL';
 MAP: 'MAP';
+MATCH: 'MATCH';
+MATCH_RECOGNIZE: 'MATCH_RECOGNIZE';
+MATCHES: 'MATCHES';
 MATERIALIZED: 'MATERIALIZED';
+MEASURES: 'MEASURES';
 MINUTE: 'MINUTE';
 MONTH: 'MONTH';
 NATURAL: 'NATURAL';
@@ -678,7 +767,9 @@ NULL: 'NULL';
 NULLIF: 'NULLIF';
 NULLS: 'NULLS';
 OFFSET: 'OFFSET';
+OMIT: 'OMIT';
 ON: 'ON';
+ONE: 'ONE';
 ONLY: 'ONLY';
 OPTION: 'OPTION';
 OR: 'OR';
@@ -689,7 +780,11 @@ OUTPUT: 'OUTPUT';
 OVER: 'OVER';
 PARTITION: 'PARTITION';
 PARTITIONS: 'PARTITIONS';
+PAST: 'PAST';
 PATH: 'PATH';
+PATTERN: 'PATTERN';
+PER: 'PER';
+PERMUTE: 'PERMUTE';
 POSITION: 'POSITION';
 PRECEDING: 'PRECEDING';
 PRECISION: 'PRECISION';
@@ -724,9 +819,11 @@ SESSION: 'SESSION';
 SET: 'SET';
 SETS: 'SETS';
 SHOW: 'SHOW';
+SKIP_: 'SKIP';  // reserved name in ANTLR
 SOME: 'SOME';
 START: 'START';
 STATS: 'STATS';
+SUBSET: 'SUBSET';
 SUBSTRING: 'SUBSTRING';
 SYSTEM: 'SYSTEM';
 TABLE: 'TABLE';
@@ -746,6 +843,7 @@ UESCAPE: 'UESCAPE';
 UNBOUNDED: 'UNBOUNDED';
 UNCOMMITTED: 'UNCOMMITTED';
 UNION: 'UNION';
+UNMATCHED: 'UNMATCHED';
 UNNEST: 'UNNEST';
 USE: 'USE';
 USER: 'USER';

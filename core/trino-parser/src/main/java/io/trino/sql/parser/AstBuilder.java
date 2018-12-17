@@ -1309,20 +1309,20 @@ class AstBuilder
     }
 
     @Override
-    public Node visitAliasedRelation(SqlBaseParser.AliasedRelationContext context)
+    public Node visitNamedRelation(SqlBaseParser.NamedRelationContext context)
     {
         Relation child = (Relation) visit(context.relationPrimary());
 
-        if (context.identifier() == null) {
+        if (context.relationAlias() == null) {
             return child;
         }
 
         List<Identifier> aliases = null;
-        if (context.columnAliases() != null) {
-            aliases = visit(context.columnAliases().identifier(), Identifier.class);
+        if (context.relationAlias().columnAliases() != null) {
+            aliases = visit(context.relationAlias().columnAliases().identifier(), Identifier.class);
         }
 
-        return new AliasedRelation(getLocation(context), child, (Identifier) visit(context.identifier()), aliases);
+        return new AliasedRelation(getLocation(context), child, (Identifier) visit(context.relationAlias().identifier()), aliases);
     }
 
     @Override
