@@ -63,14 +63,22 @@ import io.trino.sql.tree.JoinUsing;
 import io.trino.sql.tree.Lateral;
 import io.trino.sql.tree.LikeClause;
 import io.trino.sql.tree.Limit;
+import io.trino.sql.tree.MatchRecognize;
+import io.trino.sql.tree.MatchSkipPastLastRow;
+import io.trino.sql.tree.MatchSkipToFirst;
+import io.trino.sql.tree.MatchSkipToLast;
+import io.trino.sql.tree.MatchSkipToNextRow;
 import io.trino.sql.tree.NaturalJoin;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.Offset;
 import io.trino.sql.tree.OrderBy;
+import io.trino.sql.tree.ParenthesizedRowPattern;
+import io.trino.sql.tree.PatternRelation;
 import io.trino.sql.tree.Prepare;
 import io.trino.sql.tree.PrincipalSpecification;
 import io.trino.sql.tree.Property;
 import io.trino.sql.tree.QualifiedName;
+import io.trino.sql.tree.QuantifiedRowPattern;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.RefreshMaterializedView;
@@ -84,6 +92,11 @@ import io.trino.sql.tree.Revoke;
 import io.trino.sql.tree.RevokeRoles;
 import io.trino.sql.tree.Rollback;
 import io.trino.sql.tree.Row;
+import io.trino.sql.tree.RowPattern;
+import io.trino.sql.tree.RowPatternAlternation;
+import io.trino.sql.tree.RowPatternMatchVariable;
+import io.trino.sql.tree.RowPatternQuantifier;
+import io.trino.sql.tree.RowPatternSequence;
 import io.trino.sql.tree.SampledRelation;
 import io.trino.sql.tree.Select;
 import io.trino.sql.tree.SelectItem;
@@ -1528,6 +1541,168 @@ public final class SqlFormatter
         {
             builder.append("SET PATH ");
             builder.append(Joiner.on(", ").join(node.getPathSpecification().getPath()));
+
+            return null;
+        }
+
+        @Override
+        protected Void visitPatternRelation(PatternRelation node, Integer indent)
+        {
+            process(node.getRelation(), indent);
+
+            node.getInputName().ifPresent(inputName -> {
+                builder.append(" ")
+                        .append(formatExpression(inputName));
+                appendAliasColumns(builder, node.getInputColumnNames());
+            });
+
+            process(node.getMatchRecognize(), indent);
+
+            node.getOutputName().ifPresent(outputName -> {
+                builder.append(" ")
+                        .append(formatExpression(outputName));
+                appendAliasColumns(builder, node.getOutputColumnNames());
+            });
+
+            return null;
+        }
+
+        @Override
+        protected Void visitMatchRecognize(MatchRecognize node, Integer indent)
+        {
+            builder.append("\n");
+            append(indent, "MATCH_RECOGNIZE (\n");
+
+            String itemIndent = indentString(indent + 2);
+
+            if (!node.getPartitionBy().isEmpty()) {
+                append(indent + 1, "PARTITION BY ");
+                builder.append(node.getPartitionBy().stream()
+                        .map(value -> formatExpression(value))
+                        .collect(joining(", ")))
+                        .append("\n");
+            }
+
+            node.getOrderBy().ifPresent(orderBy ->
+                    append(indent + 1, formatOrderBy(orderBy) + "\n"));
+
+            if (!node.getMeasures().isEmpty()) {
+                append(indent + 1, "MEASURES\n");
+                builder.append(node.getMeasures().stream()
+                        .map(measure -> format("%s AS %s",
+                                formatExpression(measure.getExpression()),
+                                measure.getName()))
+                        .collect(joining(",\n" + itemIndent, itemIndent, "\n")));
+            }
+
+            node.getRowsPerMatch().ifPresent(rowsPerMatch ->
+                    append(indent + 1, rowsPerMatch.getType().getText() + "\n"));
+
+            node.getSkip().ifPresent(skip -> {
+                append(indent + 1, "AFTER MATCH ");
+                if (skip instanceof MatchSkipToNextRow) {
+                    builder.append("SKIP TO NEXT ROW");
+                }
+                else if (skip instanceof MatchSkipPastLastRow) {
+                    builder.append("SKIP PAST LAST ROW");
+                }
+                else if (skip instanceof MatchSkipToFirst) {
+                    builder.append("SKIP TO FIRST ").append(((MatchSkipToFirst) skip).getVariable());
+                }
+                else if (skip instanceof MatchSkipToLast) {
+                    builder.append("SKIP TO LAST ").append(((MatchSkipToLast) skip).getVariable());
+                }
+                else {
+                    throw new UnsupportedOperationException("unknown match skip: " + skip);
+                }
+                builder.append("\n");
+            });
+
+            append(indent + 1, "PATTERN (");
+            process(node.getPattern(), indent + 1);
+            builder.append(")\n");
+
+            if (!node.getSubsets().isEmpty()) {
+                append(indent + 1, "SUBSET\n");
+                builder.append(node.getSubsets().stream()
+                        .map(measure -> format("%s = (%s)",
+                                measure.getVariable(),
+                                Joiner.on(", ").join(measure.getGrouping())))
+                        .collect(joining(",\n" + itemIndent, itemIndent, "\n")));
+            }
+
+            append(indent + 1, "DEFINE\n");
+            builder.append(node.getDefinitions().stream()
+                    .map(definition -> format("%s AS %s",
+                            definition.getVariable(),
+                            formatExpression(definition.getCondition())))
+                    .collect(joining(",\n" + itemIndent, itemIndent, "\n")));
+
+            append(indent, ")\n");
+
+            return null;
+        }
+
+        @Override
+        protected Void visitRowPatternSequence(RowPatternSequence node, Integer indent)
+        {
+            Iterator<RowPattern> iterator = node.getSequence().iterator();
+            while (iterator.hasNext()) {
+                process(iterator.next(), indent);
+                if (iterator.hasNext()) {
+                    builder.append(" ");
+                }
+            }
+
+            return null;
+        }
+
+        @Override
+        protected Void visitRowPatternAlternation(RowPatternAlternation node, Integer indent)
+        {
+            Iterator<RowPattern> iterator = node.getPatterns().iterator();
+            while (iterator.hasNext()) {
+                process(iterator.next(), indent);
+                if (iterator.hasNext()) {
+                    builder.append(" | ");
+                }
+            }
+
+            return null;
+        }
+
+        @Override
+        protected Void visitRowPatternMatchVariable(RowPatternMatchVariable node, Integer indent)
+        {
+            builder.append(formatExpression(node.getVariable()));
+
+            return null;
+        }
+
+        @Override
+        protected Void visitQuantifiedRowPattern(QuantifiedRowPattern node, Integer indent)
+        {
+            process(node.getPattern(), indent);
+            process(node.getQuantifier(), indent);
+
+            return null;
+        }
+
+        @Override
+        protected Void visitParenthesizedRowPattern(ParenthesizedRowPattern node, Integer indent)
+        {
+            builder.append("(");
+            node.getPattern().ifPresent(pattern -> process(pattern, indent));
+            builder.append(")");
+
+            return null;
+        }
+
+        @Override
+        protected Void visitRowPatternQuantifier(RowPatternQuantifier node, Integer context)
+        {
+            builder.append(node);
+
             return null;
         }
 

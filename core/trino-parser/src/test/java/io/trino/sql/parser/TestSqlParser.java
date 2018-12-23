@@ -94,6 +94,11 @@ import io.trino.sql.tree.LikeClause;
 import io.trino.sql.tree.Limit;
 import io.trino.sql.tree.LogicalBinaryExpression;
 import io.trino.sql.tree.LongLiteral;
+import io.trino.sql.tree.MatchDefinition;
+import io.trino.sql.tree.MatchMeasure;
+import io.trino.sql.tree.MatchRecognize;
+import io.trino.sql.tree.MatchSkipToLast;
+import io.trino.sql.tree.MatchSubset;
 import io.trino.sql.tree.NaturalJoin;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeLocation;
@@ -103,13 +108,16 @@ import io.trino.sql.tree.NullLiteral;
 import io.trino.sql.tree.Offset;
 import io.trino.sql.tree.OrderBy;
 import io.trino.sql.tree.Parameter;
+import io.trino.sql.tree.ParenthesizedRowPattern;
 import io.trino.sql.tree.PathElement;
 import io.trino.sql.tree.PathSpecification;
+import io.trino.sql.tree.PatternRelation;
 import io.trino.sql.tree.Prepare;
 import io.trino.sql.tree.PrincipalSpecification;
 import io.trino.sql.tree.Property;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.QuantifiedComparisonExpression;
+import io.trino.sql.tree.QuantifiedRowPattern;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.RefreshMaterializedView;
@@ -123,6 +131,11 @@ import io.trino.sql.tree.RevokeRoles;
 import io.trino.sql.tree.Rollback;
 import io.trino.sql.tree.Rollup;
 import io.trino.sql.tree.Row;
+import io.trino.sql.tree.RowPattern;
+import io.trino.sql.tree.RowPatternMatchVariable;
+import io.trino.sql.tree.RowPatternQuantifier;
+import io.trino.sql.tree.RowPatternSequence;
+import io.trino.sql.tree.RowsPerMatch;
 import io.trino.sql.tree.Select;
 import io.trino.sql.tree.SelectItem;
 import io.trino.sql.tree.SetPath;
@@ -194,6 +207,8 @@ import static io.trino.sql.parser.TreeNodes.simpleType;
 import static io.trino.sql.testing.TreeAssertions.assertFormattedSql;
 import static io.trino.sql.tree.ArithmeticUnaryExpression.negative;
 import static io.trino.sql.tree.ArithmeticUnaryExpression.positive;
+import static io.trino.sql.tree.ComparisonExpression.Operator.GREATER_THAN;
+import static io.trino.sql.tree.ComparisonExpression.Operator.LESS_THAN_OR_EQUAL;
 import static io.trino.sql.tree.DateTimeDataType.Type.TIMESTAMP;
 import static io.trino.sql.tree.SortItem.NullOrdering.UNDEFINED;
 import static io.trino.sql.tree.SortItem.Ordering.ASCENDING;
@@ -2723,6 +2738,84 @@ public class TestSqlParser
                         false,
                         Optional.of(NullTreatment.RESPECT),
                         ImmutableList.of(new Identifier("x"), new LongLiteral("1"))));
+    }
+
+    @Test
+    public void testMatchRecognize()
+    {
+        assertStatement(
+                "SELECT * FROM t\n" +
+                        "MATCH_RECOGNIZE (\n" +
+                        "   PARTITION BY a, b, c\n" +
+                        "   ORDER BY d, e DESC, f NULLS LAST\n" +
+                        "   MEASURES\n" +
+                        "      classifier() AS t,\n" +
+                        "      avg(z.price) AS z\n" +
+                        "   ALL ROWS PER MATCH\n" +
+                        "   AFTER MATCH SKIP TO LAST x\n" +
+                        "   PATTERN (s (r x r+)?)\n" +
+                        "   SUBSET z = (r, x)\n" +
+                        "   DEFINE\n" +
+                        "      r AS r.price > r.price,\n" +
+                        "      x AS x.price <= x.price\n" +
+                        ")",
+                simpleQuery(
+                        selectList(new AllColumns()),
+                        new PatternRelation(
+                                Optional.empty(),
+                                table(QualifiedName.of("t")),
+                                new MatchRecognize(
+                                        Optional.empty(),
+                                        ImmutableList.of(identifier("a"), identifier("b"), identifier("c")),
+                                        Optional.of(new OrderBy(ImmutableList.<SortItem>builder()
+                                                .add(new SortItem(identifier("d"), ASCENDING, UNDEFINED))
+                                                .add(new SortItem(identifier("e"), DESCENDING, UNDEFINED))
+                                                .add(new SortItem(identifier("f"), ASCENDING, SortItem.NullOrdering.LAST))
+                                                .build())),
+                                        ImmutableList.<MatchMeasure>builder()
+                                                .add(new MatchMeasure(
+                                                        new FunctionCall(QualifiedName.of("classifier"), ImmutableList.of()),
+                                                        identifier("t")))
+                                                .add(new MatchMeasure(
+                                                        new FunctionCall(QualifiedName.of("avg"), ImmutableList.of(
+                                                                new DereferenceExpression(identifier("z"), identifier("price")))),
+                                                        identifier("z")))
+                                                .build(),
+                                        Optional.of(new RowsPerMatch(RowsPerMatch.Type.ALL_ROWS)),
+                                        Optional.of(new MatchSkipToLast(identifier("x"))),
+                                        new RowPatternSequence(ImmutableList.of(
+                                                new RowPatternMatchVariable(identifier("s")),
+                                                new QuantifiedRowPattern(
+                                                        new ParenthesizedRowPattern(Optional.of(
+                                                                new RowPatternSequence(ImmutableList.<RowPattern>builder()
+                                                                        .add(new RowPatternMatchVariable(identifier("r")))
+                                                                        .add(new RowPatternMatchVariable(identifier("x")))
+                                                                        .add(new QuantifiedRowPattern(
+                                                                                new RowPatternMatchVariable(identifier("r")),
+                                                                                RowPatternQuantifier.oneOrMore(Optional.empty(), false)))
+                                                                        .build()))),
+                                                        RowPatternQuantifier.zeroOrOne(Optional.empty(), false)))),
+                                        ImmutableList.of(new MatchSubset(
+                                                identifier("z"),
+                                                ImmutableList.of(identifier("r"), identifier("x")))),
+                                        ImmutableList.<MatchDefinition>builder()
+                                                .add(new MatchDefinition(
+                                                        identifier("r"),
+                                                        new ComparisonExpression(
+                                                                GREATER_THAN,
+                                                                new DereferenceExpression(identifier("r"), identifier("price")),
+                                                                new DereferenceExpression(identifier("r"), identifier("price")))))
+                                                .add(new MatchDefinition(
+                                                        identifier("x"),
+                                                        new ComparisonExpression(
+                                                                LESS_THAN_OR_EQUAL,
+                                                                new DereferenceExpression(identifier("x"), identifier("price")),
+                                                                new DereferenceExpression(identifier("x"), identifier("price")))))
+                                                .build()),
+                                Optional.empty(),
+                                ImmutableList.of(),
+                                Optional.empty(),
+                                ImmutableList.of())));
     }
 
     private static QualifiedName makeQualifiedName(String tableName)

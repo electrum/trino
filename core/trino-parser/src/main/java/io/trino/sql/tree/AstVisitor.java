@@ -871,4 +871,109 @@ public abstract class AstVisitor<R, C>
     {
         return visitStatement(node, context);
     }
+
+    protected R visitPatternRelation(PatternRelation node, C context)
+    {
+        return visitRelation(node, context);
+    }
+
+    protected R visitMatchRecognize(MatchRecognize node, C context)
+    {
+        return visitNode(node, context);
+    }
+
+    protected R visitRowPattern(RowPattern node, C context)
+    {
+        return visitNode(node, context);
+    }
+
+    protected R visitRowPatternAlternation(RowPatternAlternation node, C context)
+    {
+        return visitRowPattern(node, context);
+    }
+
+    protected R visitRowPatternMatchStart(RowPatternMatchStart node, C context)
+    {
+        return visitRowPattern(node, context);
+    }
+
+    protected R visitRowPatternMatchEnd(RowPatternMatchEnd node, C context)
+    {
+        return visitRowPattern(node, context);
+    }
+
+    protected R visitRowPatternMatchVariable(RowPatternMatchVariable node, C context)
+    {
+        return visitRowPattern(node, context);
+    }
+
+    protected R visitRowPatternSequence(RowPatternSequence node, C context)
+    {
+        return visitRowPattern(node, context);
+    }
+
+    protected R visitQuantifiedRowPattern(QuantifiedRowPattern node, C context)
+    {
+        return visitRowPattern(node, context);
+    }
+
+    protected R visitExcludedRowPattern(ExcludedRowPattern node, C context)
+    {
+        return visitRowPattern(node, context);
+    }
+
+    protected R visitParenthesizedRowPattern(ParenthesizedRowPattern node, C context)
+    {
+        return visitRowPattern(node, context);
+    }
+
+    protected R visitPermutedRowPattern(PermutedRowPattern node, C context)
+    {
+        return visitRowPattern(node, context);
+    }
+
+    protected R visitRowPatternQuantifier(RowPatternQuantifier node, C context)
+    {
+        return visitNode(node, context);
+    }
+
+    protected R visitMatchDefinition(MatchDefinition node, C context)
+    {
+        return visitNode(node, context);
+    }
+
+    protected R visitMatchMeasure(MatchMeasure node, C context)
+    {
+        return visitNode(node, context);
+    }
+
+    protected R visitRowsPerMatch(RowsPerMatch node, C context)
+    {
+        return visitNode(node, context);
+    }
+
+    protected R visitMatchSubset(MatchSubset node, C context)
+    {
+        return visitNode(node, context);
+    }
+
+    protected R visitMatchSkipToNextRow(MatchSkipToNextRow node, C context)
+    {
+        return visitNode(node, context);
+    }
+
+    protected R visitMatchSkipPastLastRow(MatchSkipPastLastRow node, C context)
+    {
+        return visitNode(node, context);
+    }
+
+    protected R visitMatchSkipToFirst(MatchSkipToFirst node, C context)
+    {
+        return visitNode(node, context);
+    }
+
+    protected R visitMatchSkipToLast(MatchSkipToLast node, C context)
+    {
+        return visitNode(node, context);
+    }
 }

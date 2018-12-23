@@ -66,6 +66,7 @@ import io.trino.sql.tree.DropSchema;
 import io.trino.sql.tree.DropTable;
 import io.trino.sql.tree.DropView;
 import io.trino.sql.tree.Except;
+import io.trino.sql.tree.ExcludedRowPattern;
 import io.trino.sql.tree.Execute;
 import io.trino.sql.tree.ExistsPredicate;
 import io.trino.sql.tree.Explain;
@@ -112,6 +113,15 @@ import io.trino.sql.tree.LikePredicate;
 import io.trino.sql.tree.Limit;
 import io.trino.sql.tree.LogicalBinaryExpression;
 import io.trino.sql.tree.LongLiteral;
+import io.trino.sql.tree.MatchDefinition;
+import io.trino.sql.tree.MatchMeasure;
+import io.trino.sql.tree.MatchRecognize;
+import io.trino.sql.tree.MatchSkip;
+import io.trino.sql.tree.MatchSkipPastLastRow;
+import io.trino.sql.tree.MatchSkipToFirst;
+import io.trino.sql.tree.MatchSkipToLast;
+import io.trino.sql.tree.MatchSkipToNextRow;
+import io.trino.sql.tree.MatchSubset;
 import io.trino.sql.tree.NaturalJoin;
 import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeLocation;
@@ -122,13 +132,17 @@ import io.trino.sql.tree.NumericParameter;
 import io.trino.sql.tree.Offset;
 import io.trino.sql.tree.OrderBy;
 import io.trino.sql.tree.Parameter;
+import io.trino.sql.tree.ParenthesizedRowPattern;
 import io.trino.sql.tree.PathElement;
 import io.trino.sql.tree.PathSpecification;
+import io.trino.sql.tree.PatternRelation;
+import io.trino.sql.tree.PermutedRowPattern;
 import io.trino.sql.tree.Prepare;
 import io.trino.sql.tree.PrincipalSpecification;
 import io.trino.sql.tree.Property;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.QuantifiedComparisonExpression;
+import io.trino.sql.tree.QuantifiedRowPattern;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QueryBody;
 import io.trino.sql.tree.QuerySpecification;
@@ -145,6 +159,14 @@ import io.trino.sql.tree.Rollback;
 import io.trino.sql.tree.Rollup;
 import io.trino.sql.tree.Row;
 import io.trino.sql.tree.RowDataType;
+import io.trino.sql.tree.RowPattern;
+import io.trino.sql.tree.RowPatternAlternation;
+import io.trino.sql.tree.RowPatternMatchEnd;
+import io.trino.sql.tree.RowPatternMatchStart;
+import io.trino.sql.tree.RowPatternMatchVariable;
+import io.trino.sql.tree.RowPatternQuantifier;
+import io.trino.sql.tree.RowPatternSequence;
+import io.trino.sql.tree.RowsPerMatch;
 import io.trino.sql.tree.SampledRelation;
 import io.trino.sql.tree.SearchedCaseExpression;
 import io.trino.sql.tree.Select;
@@ -207,6 +229,7 @@ import static com.google.common.collect.Iterables.getOnlyElement;
 import static io.trino.sql.QueryUtil.query;
 import static io.trino.sql.parser.SqlBaseParser.TIME;
 import static io.trino.sql.parser.SqlBaseParser.TIMESTAMP;
+import static java.lang.Integer.parseInt;
 import static java.lang.String.format;
 import static java.util.Locale.ENGLISH;
 import static java.util.Objects.requireNonNull;
@@ -2045,6 +2068,246 @@ class AstBuilder
         io.trino.sql.tree.Parameter parameter = new io.trino.sql.tree.Parameter(getLocation(context), parameterPosition);
         parameterPosition++;
         return parameter;
+    }
+
+    // ***************** match recognize *****************
+
+    @Override
+    public Node visitPatternRelation(SqlBaseParser.PatternRelationContext context)
+    {
+        Optional<Identifier> inputName = Optional.empty();
+        List<Identifier> inputColumnNames = ImmutableList.of();
+        if (context.in != null) {
+            inputName = Optional.of((Identifier) visit(context.in.identifier()));
+            inputColumnNames = visit(context.in.columnAliases().identifier(), Identifier.class);
+        }
+
+        Optional<Identifier> outputName = Optional.empty();
+        List<Identifier> outputColumnNames = ImmutableList.of();
+        if (context.out != null) {
+            outputName = Optional.of((Identifier) visit(context.out.identifier()));
+            outputColumnNames = visit(context.out.columnAliases().identifier(), Identifier.class);
+        }
+
+        return new PatternRelation(
+                Optional.of(getLocation(context)),
+                (Relation) visit(context.relationPrimary()),
+                (MatchRecognize) visit(context.matchRecognize()),
+                inputName,
+                inputColumnNames,
+                outputName,
+                outputColumnNames);
+    }
+
+    @Override
+    public Node visitMatchRecognize(SqlBaseParser.MatchRecognizeContext context)
+    {
+        return new MatchRecognize(
+                Optional.of(getLocation(context)),
+                visit(context.partition, Expression.class),
+                Optional.of(context.ORDER()).map(order ->
+                        new OrderBy(getLocation(order), visit(context.sortItem(), SortItem.class))),
+                visit(context.matchMeasure(), MatchMeasure.class),
+                visitIfPresent(context.rowsPerMatch(), RowsPerMatch.class),
+                visitIfPresent(context.matchSkipTo(), MatchSkip.class),
+                (RowPattern) visit(context.rowPattern()),
+                visit(context.matchSubset(), MatchSubset.class),
+                visit(context.matchDefinition(), MatchDefinition.class));
+    }
+
+    @Override
+    public Node visitRowPattern(SqlBaseParser.RowPatternContext context)
+    {
+        if (context.rowPatternTerm().size() == 1) {
+            return visit(context.rowPatternTerm(0));
+        }
+
+        return new RowPatternAlternation(getLocation(context), visit(context.rowPatternTerm(), RowPattern.class));
+    }
+
+    @Override
+    public Node visitRowPatternTerm(SqlBaseParser.RowPatternTermContext context)
+    {
+        return new RowPatternSequence(getLocation(context), visit(context.rowPatternFactor(), RowPattern.class));
+    }
+
+    @Override
+    public Node visitRowPatternFactor(SqlBaseParser.RowPatternFactorContext context)
+    {
+        RowPattern pattern = (RowPattern) visit(context.rowPatternPrimary());
+
+        if (context.rowPatternQuantifier() == null) {
+            return pattern;
+        }
+
+        return new QuantifiedRowPattern(
+                getLocation(context),
+                pattern,
+                (RowPatternQuantifier) visit(context.rowPatternQuantifier()));
+    }
+
+    @Override
+    public Node visitMatchIdentifier(SqlBaseParser.MatchIdentifierContext context)
+    {
+        return new RowPatternMatchVariable(getLocation(context), (Identifier) visit(context.identifier()));
+    }
+
+    @Override
+    public Node visitMatchStart(SqlBaseParser.MatchStartContext context)
+    {
+        return new RowPatternMatchStart(getLocation(context));
+    }
+
+    @Override
+    public Node visitMatchEnd(SqlBaseParser.MatchEndContext context)
+    {
+        return new RowPatternMatchEnd(getLocation(context));
+    }
+
+    @Override
+    public Node visitParenthesizedPattern(SqlBaseParser.ParenthesizedPatternContext context)
+    {
+        return new ParenthesizedRowPattern(getLocation(context), visitIfPresent(context.rowPattern(), RowPattern.class));
+    }
+
+    @Override
+    public Node visitExcludedPattern(SqlBaseParser.ExcludedPatternContext context)
+    {
+        return new ExcludedRowPattern(getLocation(context), (RowPattern) visit(context.rowPattern()));
+    }
+
+    @Override
+    public Node visitPermutedPattern(SqlBaseParser.PermutedPatternContext context)
+    {
+        return new PermutedRowPattern(getLocation(context), visit(context.rowPattern(), RowPattern.class));
+    }
+
+    @Override
+    public Node visitZeroOrMoreIterations(SqlBaseParser.ZeroOrMoreIterationsContext context)
+    {
+        return RowPatternQuantifier.zeroOrMore(Optional.of(getLocation(context)), context.reluctant() != null);
+    }
+
+    @Override
+    public Node visitOneOrMoreIterations(SqlBaseParser.OneOrMoreIterationsContext context)
+    {
+        return RowPatternQuantifier.oneOrMore(Optional.of(getLocation(context)), context.reluctant() != null);
+    }
+
+    @Override
+    public Node visitZeroOrOneIterations(SqlBaseParser.ZeroOrOneIterationsContext context)
+    {
+        return RowPatternQuantifier.zeroOrOne(Optional.of(getLocation(context)), context.reluctant() != null);
+    }
+
+    @Override
+    public Node visitAtLeastIterations(SqlBaseParser.AtLeastIterationsContext context)
+    {
+        int min = parseInt(context.min.getText());
+        return RowPatternQuantifier.atLeast(Optional.of(getLocation(context)), min, context.reluctant() != null);
+    }
+
+    @Override
+    public Node visitAtMostIterations(SqlBaseParser.AtMostIterationsContext context)
+    {
+        int max = parseInt(context.max.getText());
+        return RowPatternQuantifier.atMost(Optional.of(getLocation(context)), max, context.reluctant() != null);
+    }
+
+    @Override
+    public Node visitBetweenIterations(SqlBaseParser.BetweenIterationsContext context)
+    {
+        int min = parseInt(context.min.getText());
+        int max = parseInt(context.max.getText());
+        return RowPatternQuantifier.between(Optional.of(getLocation(context)), min, max, context.reluctant() != null);
+    }
+
+    @Override
+    public Node visitExactIterations(SqlBaseParser.ExactIterationsContext context)
+    {
+        int count = parseInt(context.count.getText());
+        return RowPatternQuantifier.exact(Optional.of(getLocation(context)), count);
+    }
+
+    @Override
+    public Node visitMatchDefinition(SqlBaseParser.MatchDefinitionContext context)
+    {
+        return new MatchDefinition(
+                getLocation(context),
+                (Identifier) visit(context.identifier()),
+                (Expression) visit(context.expression()));
+    }
+
+    @Override
+    public Node visitMatchMeasure(SqlBaseParser.MatchMeasureContext context)
+    {
+        return new MatchMeasure(
+                getLocation(context),
+                (Expression) visit(context.expression()),
+                (Identifier) visit(context.identifier()));
+    }
+
+    @Override
+    public Node visitMatchSubset(SqlBaseParser.MatchSubsetContext context)
+    {
+        return new MatchSubset(
+                getLocation(context),
+                (Identifier) visit(context.name),
+                visit(context.names, Identifier.class));
+    }
+
+    @Override
+    public Node visitOneRowPerMatch(SqlBaseParser.OneRowPerMatchContext context)
+    {
+        return new RowsPerMatch(getLocation(context), RowsPerMatch.Type.ONE_ROW);
+    }
+
+    @Override
+    public Node visitAllRowsPerMatch(SqlBaseParser.AllRowsPerMatchContext context)
+    {
+        return new RowsPerMatch(getLocation(context), RowsPerMatch.Type.ALL_ROWS);
+    }
+
+    @Override
+    public Node visitShowEmptyMatches(SqlBaseParser.ShowEmptyMatchesContext context)
+    {
+        return new RowsPerMatch(getLocation(context), RowsPerMatch.Type.ALL_ROWS_SHOW_EMPTY);
+    }
+
+    @Override
+    public Node visitOmitEmptyMatches(SqlBaseParser.OmitEmptyMatchesContext context)
+    {
+        return new RowsPerMatch(getLocation(context), RowsPerMatch.Type.ALL_ROWS_OMIT_EMPTY);
+    }
+
+    @Override
+    public Node visitWithUnmatchedRows(SqlBaseParser.WithUnmatchedRowsContext context)
+    {
+        return new RowsPerMatch(getLocation(context), RowsPerMatch.Type.ALL_ROWS_WITH_UNMATCHED);
+    }
+
+    @Override
+    public Node visitSkipToNextRow(SqlBaseParser.SkipToNextRowContext context)
+    {
+        return new MatchSkipToNextRow(getLocation(context));
+    }
+
+    @Override
+    public Node visitSkipPastLastRow(SqlBaseParser.SkipPastLastRowContext context)
+    {
+        return new MatchSkipPastLastRow(getLocation(context));
+    }
+
+    @Override
+    public Node visitSkipToFirst(SqlBaseParser.SkipToFirstContext context)
+    {
+        return new MatchSkipToFirst(getLocation(context), (Identifier) visit(context.identifier()));
+    }
+
+    @Override
+    public Node visitSkipToLast(SqlBaseParser.SkipToLastContext context)
+    {
+        return new MatchSkipToLast(getLocation(context), (Identifier) visit(context.identifier()));
     }
 
     // ***************** arguments *****************
