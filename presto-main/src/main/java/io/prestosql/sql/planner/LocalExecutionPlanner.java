@@ -231,7 +231,6 @@ import static io.prestosql.SystemSessionProperties.getTaskWriterCount;
 import static io.prestosql.SystemSessionProperties.isExchangeCompressionEnabled;
 import static io.prestosql.SystemSessionProperties.isSpillEnabled;
 import static io.prestosql.execution.warnings.WarningCollector.NOOP;
-import static io.prestosql.metadata.FunctionKind.SCALAR;
 import static io.prestosql.operator.DistinctLimitOperator.DistinctLimitOperatorFactory;
 import static io.prestosql.operator.NestedLoopBuildOperator.NestedLoopBuildOperatorFactory;
 import static io.prestosql.operator.NestedLoopJoinOperator.NestedLoopJoinOperatorFactory;
@@ -1272,7 +1271,7 @@ public class LocalExecutionPlanner
 
         private RowExpression toRowExpression(Expression expression, Map<NodeRef<Expression>, Type> types)
         {
-            return SqlToRowExpressionTranslator.translate(expression, SCALAR, types, metadata.getFunctionManager(), metadata.getTypeManager(), session, true);
+            return SqlToRowExpressionTranslator.translate(expression, types, metadata.getFunctionManager(), metadata.getTypeManager(), session, true);
         }
 
         private Map<Integer, Type> getInputTypes(Map<Symbol, Integer> layout, List<Type> types)
