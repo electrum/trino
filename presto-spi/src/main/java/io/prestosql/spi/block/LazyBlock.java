@@ -18,6 +18,7 @@ import org.openjdk.jol.info.ClassLayout;
 
 import java.util.function.BiConsumer;
 
+import static io.prestosql.spi.block.BlockUtil.checkValidRegion;
 import static java.util.Objects.requireNonNull;
 
 public class LazyBlock
@@ -166,14 +167,15 @@ public class LazyBlock
     @Override
     public long getSizeInBytes()
     {
-        assureLoaded();
-        return block.getSizeInBytes();
+        if (isLoaded()) {
+            return block.getSizeInBytes();
+        }
+        return 0;
     }
 
     @Override
     public long getRegionSizeInBytes(int position, int length)
     {
-        assureLoaded();
         return block.getRegionSizeInBytes(position, length);
     }
 
@@ -187,8 +189,7 @@ public class LazyBlock
     @Override
     public long getRetainedSizeInBytes()
     {
-        assureLoaded();
-        return INSTANCE_SIZE + block.getRetainedSizeInBytes();
+        return INSTANCE_SIZE + (isLoaded() ? block.getRetainedSizeInBytes() : 0);
     }
 
     @Override
@@ -230,8 +231,11 @@ public class LazyBlock
     @Override
     public Block getRegion(int positionOffset, int length)
     {
-        assureLoaded();
-        return block.getRegion(positionOffset, length);
+        if (isLoaded()) {
+            return block.getRegion(positionOffset, length);
+        }
+        checkValidRegion(getPositionCount(), positionOffset, length);
+        return new LazyBlock(length, new RegionLazyBlockLoader(this, positionOffset, length));
     }
 
     @Override
@@ -285,5 +289,27 @@ public class LazyBlock
 
         // clear reference to loader to free resources, since load was successful
         loader = null;
+    }
+
+    private static class RegionLazyBlockLoader
+            implements LazyBlockLoader<LazyBlock>
+    {
+        private final LazyBlock delegate;
+        private final int positionOffset;
+        private final int length;
+
+        public RegionLazyBlockLoader(LazyBlock delegate, int positionOffset, int length)
+        {
+            this.delegate = requireNonNull(delegate, "delegate is null");
+            this.positionOffset = positionOffset;
+            this.length = length;
+        }
+
+        @Override
+        public void load(LazyBlock block)
+        {
+            Block loadedBlock = delegate.getLoadedBlock();
+            block.setBlock(loadedBlock.getRegion(positionOffset, length));
+        }
     }
 }
