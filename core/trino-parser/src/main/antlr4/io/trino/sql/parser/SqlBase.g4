@@ -186,7 +186,11 @@ tableElement
     ;
 
 columnDefinition
-    : identifier type (NOT NULL)? (COMMENT string)? (WITH properties)?
+    : identifier type defaultClause? (NOT NULL)? (COMMENT string)? (WITH properties)?
+    ;
+
+ defaultClause
+    : DEFAULT expression
     ;
 
 likeClause

@@ -1357,6 +1357,9 @@ public final class SqlFormatter
             StringBuilder builder = new StringBuilder()
                     .append(formatExpression(column.getName()))
                     .append(" ").append(column.getType());
+            column.getDefault().ifPresent(value -> builder
+                    .append(" DEFAULT ")
+                    .append(formatExpression(value)));
             if (!column.isNullable()) {
                 builder.append(" NOT NULL");
             }

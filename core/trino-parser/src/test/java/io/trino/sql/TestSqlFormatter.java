@@ -64,6 +64,7 @@ public class TestSqlFormatter
                     ImmutableList.of(new ColumnDefinition(
                             new Identifier(columnName, false),
                             new GenericDataType(location, type, ImmutableList.of()),
+                            Optional.empty(),
                             true,
                             ImmutableList.of(),
                             Optional.empty())),

@@ -2825,13 +2825,17 @@ class AstBuilder
             properties = visit(context.properties().propertyAssignments().property(), Property.class);
         }
 
+        Optional<Expression> defaultValue = Optional.ofNullable(context.defaultClause())
+                .map(SqlBaseParser.DefaultClauseContext::expression)
+                .map(expressionContext -> (Expression) visit(expressionContext));
+
         boolean nullable = context.NOT() == null;
 
         return new ColumnDefinition(
                 getLocation(context),
                 (Identifier) visit(context.identifier()),
                 (DataType) visit(context.type()),
-                nullable,
+                defaultValue, nullable,
                 properties,
                 comment);
     }
