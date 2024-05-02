@@ -3244,6 +3244,13 @@ class AstBuilder
     }
 
     @Override
+    public Node visitDollarStringLiteral(SqlBaseParser.DollarStringLiteralContext context)
+    {
+        String value = context.DOLLAR_STRING().getText();
+        return new StringLiteral(getLocation(context), value.substring(2, value.length() - 2));
+    }
+
+    @Override
     public Node visitUnicodeStringLiteral(SqlBaseParser.UnicodeStringLiteralContext context)
     {
         return new StringLiteral(getLocation(context), decodeUnicodeLiteral(context));
