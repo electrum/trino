@@ -38,6 +38,7 @@ import io.trino.sql.tree.Comment;
 import io.trino.sql.tree.Commit;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.CreateCatalog;
+import io.trino.sql.tree.CreateFunction;
 import io.trino.sql.tree.CreateMaterializedView;
 import io.trino.sql.tree.CreateRole;
 import io.trino.sql.tree.CreateSchema;
@@ -54,6 +55,7 @@ import io.trino.sql.tree.DescribeInput;
 import io.trino.sql.tree.DescribeOutput;
 import io.trino.sql.tree.Descriptor;
 import io.trino.sql.tree.DescriptorField;
+import io.trino.sql.tree.DeterministicCharacteristic;
 import io.trino.sql.tree.DoubleLiteral;
 import io.trino.sql.tree.DropCatalog;
 import io.trino.sql.tree.DropColumn;
@@ -78,6 +80,7 @@ import io.trino.sql.tree.Format;
 import io.trino.sql.tree.FrameBound;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.FunctionCall.NullTreatment;
+import io.trino.sql.tree.FunctionSpecification;
 import io.trino.sql.tree.GenericDataType;
 import io.trino.sql.tree.GenericLiteral;
 import io.trino.sql.tree.Grant;
@@ -111,6 +114,7 @@ import io.trino.sql.tree.JsonTablePlan;
 import io.trino.sql.tree.JsonValue;
 import io.trino.sql.tree.LambdaArgumentDeclaration;
 import io.trino.sql.tree.LambdaExpression;
+import io.trino.sql.tree.LanguageCharacteristic;
 import io.trino.sql.tree.Lateral;
 import io.trino.sql.tree.LikeClause;
 import io.trino.sql.tree.Limit;
@@ -254,6 +258,9 @@ import static io.trino.sql.parser.ParserAssert.assertStatementIsInvalid;
 import static io.trino.sql.parser.ParserAssert.expression;
 import static io.trino.sql.parser.ParserAssert.rowPattern;
 import static io.trino.sql.parser.ParserAssert.statement;
+import static io.trino.sql.parser.TestSqlParserRoutines.parameter;
+import static io.trino.sql.parser.TestSqlParserRoutines.returns;
+import static io.trino.sql.parser.TestSqlParserRoutines.type;
 import static io.trino.sql.parser.TreeNodes.columnDefinition;
 import static io.trino.sql.parser.TreeNodes.dateTimeType;
 import static io.trino.sql.parser.TreeNodes.field;
@@ -6173,6 +6180,36 @@ public class TestSqlParser
     public void testResetSessionAuthorization()
     {
         assertStatement("RESET SESSION AUTHORIZATION", new ResetSessionAuthorization());
+    }
+
+    @Test
+    public void testPythonFunction()
+    {
+        assertThat(statement("""
+                CREATE FUNCTION hello(s VARCHAR)
+                RETURNS varchar
+                LANGUAGE PYTHON
+                DETERMINISTIC
+                AS $$
+                def hello(s):
+                    return 'Hello, ' + s + '!'
+                $$
+                """))
+                .ignoringLocation()
+                .isEqualTo(new CreateFunction(
+                        new FunctionSpecification(
+                                QualifiedName.of("hello"),
+                                ImmutableList.of(parameter("s", type("VARCHAR"))),
+                                returns(type("varchar")),
+                                ImmutableList.of(
+                                        new LanguageCharacteristic(identifier("PYTHON")),
+                                        new DeterministicCharacteristic(true)),
+                                Optional.empty(),
+                                Optional.of(new StringLiteral("\n" + """
+                                        def hello(s):
+                                            return 'Hello, ' + s + '!'
+                                        """))),
+                        false));
     }
 
     private static QualifiedName makeQualifiedName(String tableName)
