@@ -73,7 +73,8 @@ class TestSqlParserRoutines
                         ImmutableList.of(),
                         returns(type("bigint")),
                         ImmutableList.of(),
-                        new ReturnStatement(location(), literal(42))));
+                        Optional.of(new ReturnStatement(location(), literal(42))),
+                        Optional.empty()));
     }
 
     @Test
@@ -93,7 +94,8 @@ class TestSqlParserRoutines
                                 ImmutableList.of(),
                                 returns(type("BIGINT")),
                                 ImmutableList.of(),
-                                new ReturnStatement(location(), literal(42))),
+                                Optional.of(new ReturnStatement(location(), literal(42))),
+                                Optional.empty()),
                         selectList(new FunctionCall(QualifiedName.of("answer"), ImmutableList.of()))));
     }
 
@@ -122,11 +124,12 @@ class TestSqlParserRoutines
                                         calledOnNullInput(),
                                         new SecurityCharacteristic(INVOKER),
                                         new CommentCharacteristic("hello world function")),
-                                new ReturnStatement(location(), functionCall(
+                                Optional.of(new ReturnStatement(location(), functionCall(
                                         "CONCAT",
                                         literal("Hello, "),
                                         identifier("s"),
                                         literal("!")))),
+                                Optional.empty()),
                         false));
     }
 
@@ -145,7 +148,8 @@ class TestSqlParserRoutines
                                 ImmutableList.of(),
                                 returns(type("bigint")),
                                 ImmutableList.of(),
-                                new ReturnStatement(location(), literal(42))),
+                                Optional.of(new ReturnStatement(location(), literal(42))),
+                                Optional.empty()),
                         true));
     }
 
@@ -178,7 +182,7 @@ class TestSqlParserRoutines
                                 ImmutableList.of(parameter("n", type("bigint"))),
                                 returns(type("bigint")),
                                 ImmutableList.of(),
-                                beginEnd(
+                                Optional.of(beginEnd(
                                         ImmutableList.of(
                                                 declare("a", type("bigint"), literal(1)),
                                                 declare("b", type("bigint"), literal(1)),
@@ -199,6 +203,7 @@ class TestSqlParserRoutines
                                                         assign("a", identifier("b")),
                                                         assign("b", identifier("c")))),
                                         new ReturnStatement(location(), identifier("c")))),
+                                Optional.empty()),
                         false));
     }
 
@@ -231,7 +236,7 @@ class TestSqlParserRoutines
                                 ImmutableList.of(
                                         returnsNullOnNullInput(),
                                         new SecurityCharacteristic(DEFINER)),
-                                beginEnd(
+                                Optional.of(beginEnd(
                                         ImmutableList.of(declare("lvl", type("VarChar"))),
                                         new IfStatement(
                                                 location(),
@@ -246,6 +251,37 @@ class TestSqlParserRoutines
                                                                 assign("lvl", literal("SILVER")))),
                                                 Optional.empty()),
                                         new ReturnStatement(location(), identifier("lvl")))),
+                                Optional.empty()),
+                        false));
+    }
+
+    @Test
+    public void testLanguageEngineFunction()
+    {
+        assertThat(statement("""
+                CREATE FUNCTION hello(s VARCHAR)
+                RETURNS varchar
+                LANGUAGE PYTHON
+                DETERMINISTIC
+                AS $$
+                def hello(s):
+                    return 'Hello, ' + s + '!'
+                $$
+                """))
+                .ignoringLocation()
+                .isEqualTo(new CreateFunction(
+                        new FunctionSpecification(
+                                QualifiedName.of("hello"),
+                                ImmutableList.of(parameter("s", type("VARCHAR"))),
+                                returns(type("varchar")),
+                                ImmutableList.of(
+                                        new LanguageCharacteristic(identifier("PYTHON")),
+                                        new DeterministicCharacteristic(true)),
+                                Optional.empty(),
+                                Optional.of(new StringLiteral("\n" + """
+                                        def hello(s):
+                                            return 'Hello, ' + s + '!'
+                                        """))),
                         false));
     }
 
