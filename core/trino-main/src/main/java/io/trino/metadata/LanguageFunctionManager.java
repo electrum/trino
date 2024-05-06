@@ -110,6 +110,7 @@ public class LanguageFunctionManager
         planner = new SqlRoutinePlanner(plannerContext);
     }
 
+
     public void tryRegisterQuery(Session session)
     {
         queryFunctions.putIfAbsent(session.getQueryId(), new QueryFunctions(session));
@@ -129,7 +130,7 @@ public class LanguageFunctionManager
     }
 
     @Override
-    public void registerTask(TaskId taskId, Map<FunctionId, IrRoutine> languageFunctions)
+    public void registerTask(TaskId taskId, Map<FunctionId, LanguageFunctionData> languageFunctions)
     {
         // the functions are already registered in the query, so we don't need to do anything here
     }
@@ -181,7 +182,7 @@ public class LanguageFunctionManager
                 .orElseThrow(() -> new IllegalStateException("Unknown function implementation: " + functionId));
     }
 
-    public Map<FunctionId, IrRoutine> serializeFunctionsForWorkers(Session session)
+    public Map<FunctionId, LanguageFunctionData> serializeFunctionsForWorkers(Session session)
     {
         return getQueryFunctions(session).serializeFunctionsForWorkers();
     }
@@ -240,7 +241,7 @@ public class LanguageFunctionManager
         private final Session session;
         private final Map<FunctionKey, FunctionListing> functionListing = new ConcurrentHashMap<>();
         private final Map<FunctionId, LanguageFunctionImplementation> implementationsById = new ConcurrentHashMap<>();
-        private final Map<FunctionId, IrRoutine> usedFunctions = new ConcurrentHashMap<>();
+        private final Map<FunctionId, LanguageFunctionData> usedFunctions = new ConcurrentHashMap<>();
 
         public QueryFunctions(Session session)
         {
@@ -281,17 +282,18 @@ public class LanguageFunctionManager
             FunctionId resolvedFunctionId = function.getResolvedFunctionId();
 
             // mark the function as used, so it is serialized for workers
-            usedFunctions.put(resolvedFunctionId, routine);
+            usedFunctions.put(resolvedFunctionId, LanguageFunctionData.ofIrRoutine(routine));
             return resolvedFunctionId;
         }
 
         public Optional<ScalarFunctionImplementation> specialize(FunctionId functionId, InvocationConvention invocationConvention, FunctionManager functionManager)
         {
-            IrRoutine routine = usedFunctions.get(functionId);
-            if (routine == null) {
+            LanguageFunctionData definition = usedFunctions.get(functionId);
+            if (definition == null) {
                 return Optional.empty();
             }
 
+            IrRoutine routine = definition.irRoutine().orElseThrow();
             SpecializedSqlScalarFunction function = new SqlRoutineCompiler(functionManager).compile(routine);
             return Optional.of(function.getScalarFunctionImplementation(invocationConvention));
         }
@@ -303,7 +305,7 @@ public class LanguageFunctionManager
             return function.getFunctionMetadata();
         }
 
-        public Map<FunctionId, IrRoutine> serializeFunctionsForWorkers()
+        public Map<FunctionId, LanguageFunctionData> serializeFunctionsForWorkers()
         {
             return ImmutableMap.copyOf(usedFunctions);
         }

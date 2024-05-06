@@ -90,6 +90,7 @@ import io.trino.metadata.InMemoryNodeManager;
 import io.trino.metadata.InternalBlockEncodingSerde;
 import io.trino.metadata.InternalFunctionBundle;
 import io.trino.metadata.InternalNodeManager;
+import io.trino.metadata.LanguageFunctionEngineManager;
 import io.trino.metadata.LanguageFunctionManager;
 import io.trino.metadata.MaterializedViewPropertyManager;
 import io.trino.metadata.Metadata;
@@ -346,6 +347,7 @@ public class PlanTester
                 () -> getPlannerContext().getFunctionManager());
         globalFunctionCatalog.addFunctions(SystemFunctionBundle.create(new FeaturesConfig(), typeOperators, blockTypeOperators, nodeManager.getCurrentNode().getNodeVersion()));
         TestingGroupProviderManager groupProvider = new TestingGroupProviderManager();
+        LanguageFunctionEngineManager languageFunctionEngineManager = new LanguageFunctionEngineManager();
         LanguageFunctionManager languageFunctionManager = new LanguageFunctionManager(sqlParser, typeManager, groupProvider, blockEncodingSerde);
         Metadata metadata = new MetadataManager(
                 new DisabledSystemSecurityMetadata(),
@@ -445,6 +447,7 @@ public class PlanTester
                 Optional.empty(),
                 catalogFactory,
                 globalFunctionCatalog,
+                languageFunctionEngineManager,
                 new NoOpResourceGroupManager(),
                 accessControl,
                 Optional.of(new PasswordAuthenticatorManager(new PasswordAuthenticatorConfig())),
