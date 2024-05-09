@@ -39,6 +39,7 @@ import io.trino.memory.NodeMemoryConfig;
 import io.trino.memory.QueryContext;
 import io.trino.memory.context.LocalMemoryContext;
 import io.trino.metadata.InternalNode;
+import io.trino.metadata.LanguageFunctionEngineManager;
 import io.trino.metadata.WorkerLanguageFunctionProvider;
 import io.trino.operator.DirectExchangeClient;
 import io.trino.operator.DirectExchangeClientSupplier;
@@ -324,7 +325,7 @@ public abstract class BaseTestSqlTaskManager
                 new EmbedVersion("testversion"),
                 new NoConnectorServicesProvider(),
                 createTestingPlanner(),
-                new WorkerLanguageFunctionProvider(),
+                new WorkerLanguageFunctionProvider(new LanguageFunctionEngineManager()),
                 new MockLocationFactory(),
                 taskExecutor,
                 createTestSplitMonitor(),

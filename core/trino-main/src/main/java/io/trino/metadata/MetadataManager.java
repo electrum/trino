@@ -2873,7 +2873,8 @@ public final class MetadataManager
 
             if (languageFunctionManager == null) {
                 BlockEncodingSerde blockEncodingSerde = new InternalBlockEncodingSerde(new BlockEncodingManager(), typeManager);
-                languageFunctionManager = new LanguageFunctionManager(new SqlParser(), typeManager, user -> ImmutableSet.of(), blockEncodingSerde);
+                LanguageFunctionEngineManager engineManager = new LanguageFunctionEngineManager();
+                languageFunctionManager = new LanguageFunctionManager(new SqlParser(), typeManager, user -> ImmutableSet.of(), blockEncodingSerde, engineManager);
             }
 
             return new MetadataManager(
