@@ -28,6 +28,7 @@ import org.junit.jupiter.api.parallel.Execution;
 import static io.trino.plugin.tpch.TpchConnectorFactory.TPCH_SPLITS_PER_NODE;
 import static io.trino.plugin.tpch.TpchMetadata.TINY_SCHEMA_NAME;
 import static io.trino.spi.StandardErrorCode.DIVISION_BY_ZERO;
+import static io.trino.spi.StandardErrorCode.EXCEEDED_FUNCTION_MEMORY_LIMIT;
 import static io.trino.spi.StandardErrorCode.FUNCTION_IMPLEMENTATION_ERROR;
 import static io.trino.spi.StandardErrorCode.INVALID_FUNCTION_ARGUMENT;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
@@ -348,6 +349,38 @@ public class TestPythonFunctions
                 SELECT the_answer()
                 """))
                 .matches("VALUES 42");
+    }
+
+    @Test
+    public void testMemoryLimit()
+    {
+        assertThat(assertions.query(
+                """
+                WITH FUNCTION huge(n bigint)
+                RETURNS bigint
+                LANGUAGE PYTHON
+                WITH (handler = 'huge')
+                AS $$
+                def huge(n):
+                    x = []
+                    for i in range(0, 40):
+                        x.append(bytearray(1024 * 1024))
+                $$
+                SELECT huge(nationkey)
+                FROM nation
+                """))
+                .failure()
+                .hasErrorCode(EXCEEDED_FUNCTION_MEMORY_LIMIT)
+                .hasMessage("MemoryError")
+                .hasRootCauseMessage(
+                        """
+                        Python traceback:
+                        Traceback (most recent call last):
+                          File "/guest/guest.py", line 5, in huge
+                            x.append(bytearray(1024 * 1024))
+                                     ^^^^^^^^^^^^^^^^^^^^^^
+                        MemoryError
+                        """.stripTrailing());
     }
 
     @Test
