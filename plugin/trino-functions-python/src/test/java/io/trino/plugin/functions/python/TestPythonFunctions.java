@@ -353,4 +353,42 @@ public class TestPythonFunctions
                         """);
 
     }
+
+    @Test
+    public void testTypeShortDecimal()
+    {
+        assertThat(assertions.query(
+                """
+                WITH FUNCTION test_decimal_short(x decimal(18, 5))
+                RETURNS decimal(18, 5)
+                LANGUAGE PYTHON
+                WITH (handler = 'square')
+                AS $$
+                def square(x):
+                    return x * x
+                $$
+                VALUES test_decimal_short(123.456)
+                """))
+                .skippingTypesCheck()
+                .matches("VALUES CAST(15241.38394 AS DECIMAL(18, 5))");
+    }
+
+    @Test
+    public void testTypeLongDecimal()
+    {
+        assertThat(assertions.query(
+                """
+                WITH FUNCTION test_decimal_long(x decimal(38, 5))
+                RETURNS decimal(38, 5)
+                LANGUAGE PYTHON
+                WITH (handler = 'square')
+                AS $$
+                def square(x):
+                    return x * x
+                $$
+                VALUES test_decimal_long(123.456)
+                """))
+                .skippingTypesCheck()
+                .matches("VALUES CAST(15241.38394 AS DECIMAL(38, 5))");
+    }
 }

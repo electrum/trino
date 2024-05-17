@@ -28,7 +28,9 @@ import io.trino.spi.type.BooleanType;
 import io.trino.spi.type.CharType;
 import io.trino.spi.type.DateType;
 import io.trino.spi.type.DecimalType;
+import io.trino.spi.type.Decimals;
 import io.trino.spi.type.DoubleType;
+import io.trino.spi.type.Int128;
 import io.trino.spi.type.IntegerType;
 import io.trino.spi.type.MapType;
 import io.trino.spi.type.RealType;
@@ -43,11 +45,16 @@ import io.trino.spi.type.TinyintType;
 import io.trino.spi.type.Type;
 import io.trino.spi.type.VarcharType;
 
+import java.math.BigDecimal;
 import java.util.List;
 
+import static io.airlift.slice.Slices.utf8Slice;
 import static io.trino.spi.StandardErrorCode.NOT_SUPPORTED;
+import static io.trino.spi.type.Decimals.encodeScaledValue;
+import static io.trino.spi.type.Decimals.encodeShortScaledValue;
 import static java.lang.Float.intBitsToFloat;
 import static java.lang.Math.toIntExact;
+import static java.math.RoundingMode.HALF_UP;
 
 final class TrinoTypes
 {
@@ -184,7 +191,12 @@ final class TrinoTypes
             case RowType rowType -> rowBlockToBinary((SqlRow) value, output, rowType);
             case ArrayType arrayType -> arrayBlockToBinary((Block) value, output, arrayType);
             case MapType mapType -> mapBlockToBinary((SqlMap) value, output, mapType);
-//            case DecimalType decimalType ->
+            case DecimalType decimalType -> {
+                String decimalString = decimalType.isShort()
+                        ? Decimals.toString((long) value, decimalType.getScale())
+                        : Decimals.toString((Int128) value, decimalType.getScale());
+                writeVariableSlice(utf8Slice(decimalString), output);
+            }
 //            case TimeWithTimeZoneType timeType -> output.writeLong((long) value);
 //            case TimestampType timestampType -> output.writeLong((long) value);
 //            case TimestampWithTimeZoneType timestampType -> output.writeLong((long) value);
@@ -236,7 +248,12 @@ final class TrinoTypes
             case TinyintType tinyintType -> output.writeByte(tinyintType.getByte(block, position));
             case DoubleType doubleType -> output.writeDouble(doubleType.getDouble(block, position));
             case RealType realType -> output.writeFloat(intBitsToFloat(realType.getInt(block, position)));
-//            case DecimalType
+            case DecimalType decimalType -> {
+                String decimalString = decimalType.isShort()
+                        ? Decimals.toString(decimalType.getLong(block, position), decimalType.getScale())
+                        : Decimals.toString((Int128) decimalType.getObject(block, position), decimalType.getScale());
+                writeVariableSlice(utf8Slice(decimalString), output);
+            }
             case DateType dateType -> output.writeInt(dateType.getInt(block, position));
             case TimeType timeType -> output.writeLong(timeType.getLong(block, position));
 //            case TimestampType timestampType
@@ -306,7 +323,12 @@ final class TrinoTypes
 //            case RowType rowType -> rowBinaryToJava(input, rowType);
 //            case ArrayType arrayType -> arrayBinaryToJava(input, arrayType);
 //            case MapType mapType -> mapBinaryToJava(input, mapType);
-//            case DecimalType decimalType -> decimalBinaryToJava(input, decimalType);
+            case DecimalType decimalType -> {
+                BigDecimal decimal = new BigDecimal(input.readSlice(input.readInt()).toStringUtf8());
+                yield decimalType.isShort()
+                        ? encodeShortScaledValue(decimal, decimalType.getScale(), HALF_UP)
+                        : encodeScaledValue(decimal, decimalType.getScale(), HALF_UP);
+            }
 //            case TimeWithTimeZoneType timeType -> timeWithTimeZoneBinaryToJava(input, timeType);
 //            case TimestampType timestampType -> timestampBinaryToJava(input, timestampType);
 //            case TimestampWithTimeZoneType timestampType -> timestampWithTimeZoneBinaryToJava(input, timestampType);
