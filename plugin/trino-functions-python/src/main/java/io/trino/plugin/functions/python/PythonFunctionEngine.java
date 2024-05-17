@@ -13,6 +13,7 @@
  */
 package io.trino.plugin.functions.python;
 
+import io.airlift.log.Logger;
 import io.trino.spi.TrinoException;
 import io.trino.spi.function.InvocationConvention;
 import io.trino.spi.function.LanguageFunctionEngine;
@@ -41,6 +42,8 @@ import static java.util.Collections.nCopies;
 final class PythonFunctionEngine
         implements LanguageFunctionEngine
 {
+    private static final Logger log = Logger.get(PythonFunctionEngine.class);
+
     private static final MethodHandle FACTORY_METHOD;
     private static final MethodHandle EXECUTE_METHOD;
 
@@ -69,6 +72,7 @@ final class PythonFunctionEngine
     @Override
     public void validateScalarFunction(Type returnType, List<Type> argumentTypes, String definition, Map<String, Object> properties)
     {
+        log.info("validateScalarFunction: returnType=%s, argumentTypes=%s", returnType, argumentTypes);
         validateReturnType(returnType);
 
         String handler = (String) properties.get("handler");
@@ -89,6 +93,7 @@ final class PythonFunctionEngine
             Map<String, Object> properties,
             InvocationConvention invocationConvention)
     {
+        log.info("getScalarFunctionImplementation: returnType=%s, argumentTypes=%s", returnType, argumentTypes);
         String handler = (String) properties.get("handler");
 
         Supplier<Object> factory = () -> createEngine(returnType, argumentTypes, definition, handler);
@@ -125,6 +130,7 @@ final class PythonFunctionEngine
 
     private static PythonEngine createEngine(Type returnType, List<Type> argumentTypes, String definition, String handler)
     {
+        log.info("createEngine: returnType=%s, argumentTypes=%s", returnType, argumentTypes);
         PythonEngine engine = new PythonEngine(definition);
         engine.setup(returnType, argumentTypes, handler);
         return engine;
