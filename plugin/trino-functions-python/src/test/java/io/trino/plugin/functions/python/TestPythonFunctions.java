@@ -312,6 +312,45 @@ public class TestPythonFunctions
     }
 
     @Test
+    public void testTooFewArguments()
+    {
+        assertThat(assertions.query(
+                """
+                WITH FUNCTION my_func(s varchar)
+                RETURNS bigint
+                LANGUAGE PYTHON
+                WITH (handler = 'oops')
+                AS $$
+                def oops(a, b):
+                    return a + b
+                $$
+                SELECT my_func(comment)
+                FROM nation
+                """))
+                .failure()
+                .hasErrorCode(FUNCTION_IMPLEMENTATION_ERROR)
+                .hasMessage("TypeError: oops() missing 1 required positional argument: 'b'");
+    }
+
+    @Test
+    public void testNoArgument()
+    {
+        assertThat(assertions.query(
+                """
+                WITH FUNCTION the_answer()
+                RETURNS integer
+                LANGUAGE PYTHON
+                WITH (handler = 'answer')
+                AS $$
+                def answer():
+                    return 42
+                $$
+                SELECT the_answer()
+                """))
+                .matches("VALUES 42");
+    }
+
+    @Test
     public void testSplitWords()
     {
         assertThat(assertions.query(

@@ -34,7 +34,6 @@ import io.airlift.slice.Slices;
 import io.trino.spi.ErrorCodeSupplier;
 import io.trino.spi.StandardErrorCode;
 import io.trino.spi.TrinoException;
-import io.trino.spi.type.RowType;
 import io.trino.spi.type.Type;
 
 import java.io.ByteArrayOutputStream;
@@ -56,6 +55,7 @@ import static com.dylibso.chicory.wasm.types.ValueType.I32;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static io.trino.plugin.functions.python.TrinoTypes.binaryToJava;
 import static io.trino.plugin.functions.python.TrinoTypes.javaToBinary;
+import static io.trino.plugin.functions.python.TrinoTypes.toRowTypeDescriptor;
 import static io.trino.plugin.functions.python.TrinoTypes.toTypeDescriptor;
 import static io.trino.spi.StandardErrorCode.FUNCTION_IMPLEMENTATION_ERROR;
 import static java.lang.Math.min;
@@ -154,7 +154,7 @@ final class PythonEngine
         memory.write(nameAddress, nameBytes);
         memory.writeByte(nameAddress + nameBytes.length, (byte) 0);
 
-        Slice argumentTypeSlice = toTypeDescriptor(RowType.anonymous(argumentTypes));
+        Slice argumentTypeSlice = toRowTypeDescriptor(argumentTypes);
         int argTypeAddress = allocate(argumentTypeSlice.length());
         writeSliceTo(argumentTypeSlice, argTypeAddress);
 

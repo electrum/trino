@@ -87,6 +87,18 @@ final class TrinoTypes
         }
     }
 
+    public static Slice toRowTypeDescriptor(List<Type> types)
+    {
+        if (types.isEmpty()) {
+            SliceOutput output = new DynamicSliceOutput(8);
+            output.writeInt(TrinoType.ROW.id());
+            output.writeInt(0);
+            return output.slice();
+        }
+
+        return toTypeDescriptor(RowType.anonymous(types));
+    }
+
     public static Slice toTypeDescriptor(Type type)
     {
         SliceOutput output = new DynamicSliceOutput(64);
