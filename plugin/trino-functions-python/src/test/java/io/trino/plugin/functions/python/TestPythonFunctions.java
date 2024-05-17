@@ -100,7 +100,7 @@ public class TestPythonFunctions
                 def twice(x):
                     return x * 2
                 $$
-                VALUES my_func(13)
+                SELECT my_func(13)
                 """))
                 .failure()
                 .hasErrorCode(FUNCTION_IMPLEMENTATION_ERROR)
@@ -125,7 +125,7 @@ public class TestPythonFunctions
                 defxxx twice(x):
                     return x * 2
                 $$
-                VALUES my_func(13)
+                SELECT my_func(13)
                 """))
                 .failure()
                 .hasErrorCode(FUNCTION_IMPLEMENTATION_ERROR)
@@ -351,7 +351,26 @@ public class TestPythonFunctions
                             ('refully final requests. regular, ironi', 'yllufer lanif requests. regular, inori'),
                             ('ously. final, express gifts cajole a', 'ously. final, sserpxe stfig elojac a')
                         """);
+    }
 
+    @Test
+    public void testTypeBoolean()
+    {
+        assertThat(assertions.query(
+                """
+                WITH FUNCTION xor(a boolean, b boolean)
+                RETURNS boolean
+                LANGUAGE PYTHON
+                WITH (handler = 'xor')
+                AS $$
+                import operator
+                def xor(a, b):
+                    return operator.xor(a, b)
+                $$
+                SELECT xor(false, false), xor(false, true), xor(true, false), xor(true, true)
+                """))
+                .skippingTypesCheck()
+                .matches("VALUES (false, true, true, false)");
     }
 
     @Test
