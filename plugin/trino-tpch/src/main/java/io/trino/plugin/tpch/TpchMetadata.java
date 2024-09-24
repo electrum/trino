@@ -16,7 +16,6 @@ package io.trino.plugin.tpch;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.ImmutableBiMap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -27,7 +26,6 @@ import io.trino.plugin.tpch.statistics.StatisticsEstimator;
 import io.trino.plugin.tpch.statistics.TableStatisticsData;
 import io.trino.plugin.tpch.statistics.TableStatisticsDataRepository;
 import io.trino.spi.TrinoException;
-import io.trino.spi.connector.CatalogSchemaTableName;
 import io.trino.spi.connector.ColumnHandle;
 import io.trino.spi.connector.ColumnMetadata;
 import io.trino.spi.connector.ConnectorAnalyzeMetadata;
@@ -46,7 +44,6 @@ import io.trino.spi.connector.SchemaTableName;
 import io.trino.spi.connector.SchemaTablePrefix;
 import io.trino.spi.connector.SortOrder;
 import io.trino.spi.connector.SortingProperty;
-import io.trino.spi.connector.TableScanRedirectApplicationResult;
 import io.trino.spi.predicate.Domain;
 import io.trino.spi.predicate.NullableValue;
 import io.trino.spi.predicate.TupleDomain;
@@ -125,8 +122,6 @@ public class TpchMetadata
     private final StatisticsEstimator statisticsEstimator;
     private final boolean predicatePushdownEnabled;
     private final boolean partitioningEnabled;
-    private final Optional<String> destinationCatalog;
-    private final Optional<String> destinationSchema;
 
     private final Set<NullableValue> orderStatusNullableValues;
     private final Set<NullableValue> partTypeNullableValues;
@@ -134,16 +129,10 @@ public class TpchMetadata
 
     public TpchMetadata()
     {
-        this(ColumnNaming.SIMPLIFIED, DecimalTypeMapping.DOUBLE, true, true, Optional.empty(), Optional.empty());
+        this(ColumnNaming.SIMPLIFIED, DecimalTypeMapping.DOUBLE, true, true);
     }
 
-    public TpchMetadata(
-            ColumnNaming columnNaming,
-            DecimalTypeMapping decimalTypeMapping,
-            boolean predicatePushdownEnabled,
-            boolean partitioningEnabled,
-            Optional<String> destinationCatalog,
-            Optional<String> destinationSchema)
+    public TpchMetadata(ColumnNaming columnNaming, DecimalTypeMapping decimalTypeMapping, boolean predicatePushdownEnabled, boolean partitioningEnabled)
     {
         ImmutableSet.Builder<String> tableNames = ImmutableSet.builder();
         for (TpchTable<?> tpchTable : TpchTable.getTables()) {
@@ -155,8 +144,6 @@ public class TpchMetadata
         this.predicatePushdownEnabled = predicatePushdownEnabled;
         this.partitioningEnabled = partitioningEnabled;
         this.statisticsEstimator = createStatisticsEstimator();
-        this.destinationCatalog = destinationCatalog;
-        this.destinationSchema = destinationSchema;
 
         partContainerNullableValues = PART_CONTAINER_VALUES.stream()
                 .map(value -> new NullableValue(getTrinoType(PartColumn.CONTAINER, decimalTypeMapping), value))
@@ -521,27 +508,6 @@ public class TpchMetadata
                 unenforcedConstraint,
                 constraint.getExpression(),
                 false));
-    }
-
-    @Override
-    public Optional<TableScanRedirectApplicationResult> applyTableScanRedirect(ConnectorSession session, ConnectorTableHandle table)
-    {
-        TpchTableHandle handle = (TpchTableHandle) table;
-        if (destinationCatalog.isEmpty()) {
-            return Optional.empty();
-        }
-
-        CatalogSchemaTableName destinationTable = new CatalogSchemaTableName(
-                destinationCatalog.get(),
-                destinationSchema.orElse(handle.schemaName()),
-                handle.tableName());
-        return Optional.of(
-                new TableScanRedirectApplicationResult(
-                        destinationTable,
-                        ImmutableBiMap.copyOf(getColumnHandles(session, table)).inverse(),
-                        handle.constraint()
-                                .transformKeys(TpchColumnHandle.class::cast)
-                                .transformKeys(TpchColumnHandle::columnName)));
     }
 
     private static TupleDomain<ColumnHandle> toTupleDomain(Map<TpchColumnHandle, Set<NullableValue>> predicate)

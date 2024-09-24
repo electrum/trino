@@ -27,7 +27,6 @@ import io.trino.spi.connector.ConnectorTransactionHandle;
 import io.trino.spi.transaction.IsolationLevel;
 
 import java.util.Map;
-import java.util.Optional;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static io.trino.plugin.base.Versions.checkStrictSpiVersionMatch;
@@ -42,8 +41,6 @@ public class TpchConnectorFactory
     public static final String TPCH_DOUBLE_TYPE_MAPPING_PROPERTY = "tpch.double-type-mapping";
     public static final String TPCH_PRODUCE_PAGES = "tpch.produce-pages";
     public static final String TPCH_MAX_ROWS_PER_PAGE_PROPERTY = "tpch.max-rows-per-page";
-    public static final String TPCH_TABLE_SCAN_REDIRECTION_CATALOG = "tpch.table-scan-redirection-catalog";
-    public static final String TPCH_TABLE_SCAN_REDIRECTION_SCHEMA = "tpch.table-scan-redirection-schema";
     public static final String TPCH_SPLITS_PER_NODE = "tpch.splits-per-node";
     public static final String TPCH_PARTITIONING_ENABLED = "tpch.partitioning-enabled";
     private static final int DEFAULT_MAX_ROWS_PER_PAGE = 1_000_000;
@@ -95,13 +92,7 @@ public class TpchConnectorFactory
             @Override
             public ConnectorMetadata getMetadata(ConnectorSession session, ConnectorTransactionHandle transaction)
             {
-                return new TpchMetadata(
-                        columnNaming,
-                        decimalTypeMapping,
-                        predicatePushdownEnabled,
-                        partitioningEnabled,
-                        getTpchTableScanRedirectionCatalog(properties),
-                        getTpchTableScanRedirectionSchema(properties));
+                return new TpchMetadata(columnNaming, decimalTypeMapping, predicatePushdownEnabled, partitioningEnabled);
             }
 
             @Override
@@ -161,15 +152,5 @@ public class TpchConnectorFactory
         catch (NumberFormatException e) {
             throw new IllegalArgumentException(format("Invalid property %s", TPCH_MAX_ROWS_PER_PAGE_PROPERTY));
         }
-    }
-
-    private Optional<String> getTpchTableScanRedirectionCatalog(Map<String, String> properties)
-    {
-        return Optional.ofNullable(properties.get(TPCH_TABLE_SCAN_REDIRECTION_CATALOG));
-    }
-
-    private Optional<String> getTpchTableScanRedirectionSchema(Map<String, String> properties)
-    {
-        return Optional.ofNullable(properties.get(TPCH_TABLE_SCAN_REDIRECTION_SCHEMA));
     }
 }
