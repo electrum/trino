@@ -1745,6 +1745,7 @@ public interface ConnectorMetadata
         throw new TrinoException(NOT_SUPPORTED, "This connector does not support setting materialized view properties");
     }
 
+    @Deprecated(forRemoval = true)
     default Optional<TableScanRedirectApplicationResult> applyTableScanRedirect(ConnectorSession session, ConnectorTableHandle tableHandle)
     {
         return Optional.empty();
