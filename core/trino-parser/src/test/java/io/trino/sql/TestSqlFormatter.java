@@ -14,6 +14,7 @@
 package io.trino.sql;
 
 import com.google.common.collect.ImmutableList;
+import io.trino.sql.parser.SqlParser;
 import io.trino.sql.tree.AddColumn;
 import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.ColumnDefinition;
@@ -56,6 +57,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 public class TestSqlFormatter
 {
+    private static final SqlParser SQL_PARSER = new SqlParser();
+
     @Test
     public void testShowCatalogs()
     {
@@ -576,5 +579,24 @@ public class TestSqlFormatter
                         ImmutableList.of())))
                 .isEqualTo("EXECUTE IMMEDIATE\n" +
                         "'SELECT * FROM foo WHERE col1 = ''攻殻機動隊'''");
+    }
+
+    @Test
+    public void testFrom()
+    {
+        assertFormattedStatement("FROM foo");
+        assertFormattedStatement("""
+                                 FROM a
+                                 , b
+                                 , c""");
+        assertFormattedStatement("""
+                                 (
+                                 FROM foo) LIMIT 10
+                                 """);
+    }
+
+    private static void assertFormattedStatement(String sql)
+    {
+        assertThat(formatSql(SQL_PARSER.createStatement(sql))).isEqualTo(sql);
     }
 }

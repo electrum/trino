@@ -105,6 +105,7 @@ import io.trino.sql.tree.AstVisitor;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.DereferenceExpression;
 import io.trino.sql.tree.Except;
+import io.trino.sql.tree.From;
 import io.trino.sql.tree.Identifier;
 import io.trino.sql.tree.Intersect;
 import io.trino.sql.tree.Join;
@@ -1722,6 +1723,12 @@ class RelationPlanner
         return RowType.from(node.getOutputSymbols().stream()
                 .map(symbol -> new RowType.Field(Optional.of(symbol.name()), symbol.type()))
                 .collect(toImmutableList()));
+    }
+
+    @Override
+    protected RelationPlan visitFrom(From node, Void context)
+    {
+        return process(node.getRelation(), context);
     }
 
     @Override

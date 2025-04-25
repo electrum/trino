@@ -281,6 +281,7 @@ queryTerm
 queryPrimary
     : querySpecification                   #queryPrimaryDefault
     | TABLE qualifiedName                  #table
+    | fromClause                           #from
     | VALUES expression (',' expression)*  #inlineTable
     | '(' queryNoWith ')'                  #subquery
     ;
@@ -295,11 +296,15 @@ sortItem
 
 querySpecification
     : SELECT setQuantifier? selectItem (',' selectItem)*
-      (FROM relation (',' relation)*)?
+      fromClause?
       (WHERE where=booleanExpression)?
       (GROUP BY groupBy)?
       (HAVING having=booleanExpression)?
       (WINDOW windowDefinition (',' windowDefinition)*)?
+    ;
+
+fromClause
+    : FROM relation (',' relation)*
     ;
 
 groupBy

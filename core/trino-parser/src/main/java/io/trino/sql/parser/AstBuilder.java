@@ -110,6 +110,7 @@ import io.trino.sql.tree.Extract;
 import io.trino.sql.tree.FetchFirst;
 import io.trino.sql.tree.Format;
 import io.trino.sql.tree.FrameBound;
+import io.trino.sql.tree.From;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.FunctionCall.NullTreatment;
 import io.trino.sql.tree.FunctionSpecification;
@@ -1237,26 +1238,11 @@ class AstBuilder
     @Override
     public Node visitQuerySpecification(SqlBaseParser.QuerySpecificationContext context)
     {
-        Optional<Relation> from = Optional.empty();
         List<SelectItem> selectItems = visit(context.selectItem(), SelectItem.class);
-
-        List<Relation> relations = visit(context.relation(), Relation.class);
-        if (!relations.isEmpty()) {
-            // synthesize implicit join nodes
-            Iterator<Relation> iterator = relations.iterator();
-            Relation relation = iterator.next();
-
-            while (iterator.hasNext()) {
-                relation = new Join(getLocation(context), Join.Type.IMPLICIT, relation, iterator.next(), Optional.empty());
-            }
-
-            from = Optional.of(relation);
-        }
-
         return new QuerySpecification(
                 getLocation(context),
                 new Select(getLocation(context.SELECT()), isDistinct(context.setQuantifier()), selectItems),
-                from,
+                visitIfPresent(context.fromClause(), Relation.class),
                 visitIfPresent(context.where, Expression.class),
                 visitIfPresent(context.groupBy(), GroupBy.class),
                 visitIfPresent(context.having, Expression.class),
@@ -1264,6 +1250,22 @@ class AstBuilder
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty());
+    }
+
+    @Override
+    public Node visitFromClause(SqlBaseParser.FromClauseContext context)
+    {
+        List<Relation> relations = visit(context.relation(), Relation.class);
+
+        // synthesize implicit join nodes
+        Iterator<Relation> iterator = relations.iterator();
+        Relation relation = iterator.next();
+
+        while (iterator.hasNext()) {
+            relation = new Join(getLocation(context), Join.Type.IMPLICIT, relation, iterator.next(), Optional.empty());
+        }
+
+        return relation;
     }
 
     @Override
@@ -1405,6 +1407,12 @@ class AstBuilder
     public Node visitTable(SqlBaseParser.TableContext context)
     {
         return new Table(getLocation(context), getQualifiedName(context.qualifiedName()));
+    }
+
+    @Override
+    public Node visitFrom(SqlBaseParser.FromContext context)
+    {
+        return new From(getLocation(context), (Relation) visit(context.fromClause()));
     }
 
     @Override

@@ -5892,6 +5892,14 @@ public abstract class AbstractTestEngineOnlyQueries
     }
 
     @Test
+    public void testFromQuery()
+    {
+        assertQuery("FROM orders", "SELECT * FROM orders");
+        assertQuery("FROM region, region", "SELECT * FROM region a, region b");
+        assertQuery("(FROM orders) LIMIT 10", "SELECT * FROM orders LIMIT 10");
+    }
+
+    @Test
     public void testVariance()
     {
         // int64

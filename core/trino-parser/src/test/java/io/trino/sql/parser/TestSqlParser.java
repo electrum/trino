@@ -80,6 +80,7 @@ import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FetchFirst;
 import io.trino.sql.tree.Format;
 import io.trino.sql.tree.FrameBound;
+import io.trino.sql.tree.From;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.FunctionCall.NullTreatment;
 import io.trino.sql.tree.FunctionSpecification;
@@ -1040,6 +1041,74 @@ public class TestSqlParser
                 simpleQuery(
                         selectList(new AllColumns()),
                         subquery(valuesQuery)));
+    }
+
+    @Test
+    public void testFrom()
+    {
+        assertThat(statement("FROM foo"))
+                .isEqualTo(new Query(
+                        location(1, 1),
+                        ImmutableList.of(),
+                        ImmutableList.of(),
+                        Optional.empty(),
+                        new From(
+                                location(1, 1),
+                                new Table(
+                                        location(1, 6),
+                                        qualifiedName(location(1, 6), "foo"))),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty()));
+
+        assertThat(statement("FROM a, b"))
+                .isEqualTo(new Query(
+                        location(1, 1),
+                        ImmutableList.of(),
+                        ImmutableList.of(),
+                        Optional.empty(),
+                        new From(
+                                location(1, 1),
+                                new Join(
+                                        location(1, 1),
+                                        Join.Type.IMPLICIT,
+                                        new Table(
+                                                location(1, 6),
+                                                qualifiedName(location(1, 6), "a")),
+                                        new Table(
+                                                location(1, 9),
+                                                qualifiedName(location(1, 9), "b")),
+                                        Optional.empty())),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.empty()));
+
+        assertThat(statement("(FROM foo) LIMIT 10"))
+                .isEqualTo(new Query(
+                        location(1, 1),
+                        ImmutableList.of(),
+                        ImmutableList.of(),
+                        Optional.empty(),
+                        new TableSubquery(
+                                location(1, 1),
+                                new Query(
+                                        location(1, 2),
+                                        ImmutableList.of(),
+                                        ImmutableList.of(),
+                                        Optional.empty(),
+                                        new From(
+                                                location(1, 2),
+                                                new Table(
+                                                        location(1, 7),
+                                                        qualifiedName(location(1, 7), "foo"))),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty())),
+                        Optional.empty(),
+                        Optional.empty(),
+                        Optional.of(new Limit(
+                                location(1, 12),
+                                new LongLiteral(location(1, 18),"10")))));
     }
 
     @Test
@@ -4414,10 +4483,10 @@ public class TestSqlParser
                 new ExplainAnalyze(location(1, 1), simpleQuery(selectList(new AllColumns()), table(QualifiedName.of("t"))), true));
 
         assertStatementIsInvalid("EXPLAIN ANALYZE (type DISTRIBUTED) SELECT * FROM t")
-                .withMessage("line 1:18: mismatched input 'type'. Expecting: '(', 'SELECT', 'TABLE', 'VALUES'");
+                .withMessage("line 1:18: mismatched input 'type'. Expecting: '(', 'FROM', 'SELECT', 'TABLE', 'VALUES'");
 
         assertStatementIsInvalid("EXPLAIN ANALYZE VERBOSE (type DISTRIBUTED) SELECT * FROM t")
-                .withMessage("line 1:26: mismatched input 'type'. Expecting: '(', 'SELECT', 'TABLE', 'VALUES'");
+                .withMessage("line 1:26: mismatched input 'type'. Expecting: '(', 'FROM', 'SELECT', 'TABLE', 'VALUES'");
     }
 
     @Test

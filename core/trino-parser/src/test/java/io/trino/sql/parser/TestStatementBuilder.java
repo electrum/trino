@@ -174,6 +174,10 @@ public class TestStatementBuilder
         printStatement("(table foo) limit 10");
         printStatement("(table foo limit 5) limit 10");
 
+        printStatement("from foo");
+        printStatement("from a, b, c");
+        printStatement("(from foo) limit 10");
+
         printStatement("select * from a limit all");
         printStatement("select * from a order by x limit all");
 

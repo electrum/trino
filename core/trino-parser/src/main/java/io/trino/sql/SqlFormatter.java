@@ -68,6 +68,7 @@ import io.trino.sql.tree.ExplainOption;
 import io.trino.sql.tree.ExplainType;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.FetchFirst;
+import io.trino.sql.tree.From;
 import io.trino.sql.tree.FunctionSpecification;
 import io.trino.sql.tree.Grant;
 import io.trino.sql.tree.GrantObject;
@@ -829,6 +830,14 @@ public final class SqlFormatter
             builder.append(formatName(node.getName()));
             node.getQueryPeriod().ifPresent(queryPeriod -> builder
                     .append(" " + queryPeriod));
+            return null;
+        }
+
+        @Override
+        protected Void visitFrom(From node, Integer indent)
+        {
+            builder.append("FROM ");
+            process(node.getRelation(), indent);
             return null;
         }
 

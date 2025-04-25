@@ -165,6 +165,7 @@ import io.trino.sql.tree.ExpressionTreeRewriter;
 import io.trino.sql.tree.FetchFirst;
 import io.trino.sql.tree.FieldReference;
 import io.trino.sql.tree.FrameBound;
+import io.trino.sql.tree.From;
 import io.trino.sql.tree.FunctionCall;
 import io.trino.sql.tree.FunctionSpecification;
 import io.trino.sql.tree.Grant;
@@ -3067,6 +3068,12 @@ class StatementAnalyzer
             if (tableFunctionInvocation != null && analysis.isPolymorphicTableFunction(tableFunctionInvocation)) {
                 throw semanticException(INVALID_TABLE_FUNCTION_INVOCATION, base, "Cannot apply %s to polymorphic table function invocation", context);
             }
+        }
+
+        @Override
+        protected Scope visitFrom(From node, Optional<Scope> scope)
+        {
+            return process(node.getRelation(), scope);
         }
 
         @Override
