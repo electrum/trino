@@ -595,6 +595,42 @@ public class TestSqlFormatter
                                  """);
     }
 
+    @Test
+    public void testPipeOperators()
+    {
+        assertFormattedStatement("""
+                                 FROM abc
+                                 | WHERE (x = 5)
+                                 | SELECT
+                                   x
+                                 , y
+
+                                 | ORDER BY x ASC
+
+                                 | LIMIT 10
+                                 """);
+
+        assertFormattedStatement("""
+                                 SELECT *
+                                 FROM
+                                   abc
+                                 LIMIT 5
+
+                                 | SELECT
+                                   x
+                                 , rand() y
+                                 """);
+
+        assertFormattedStatement("""
+                                 SELECT *
+                                 FROM
+                                   (
+                                 TABLE t
+
+                                    |    WHERE (x = 5))\s
+                                 """);
+    }
+
     private static void assertFormattedStatement(String sql)
     {
         assertThat(formatSql(SQL_PARSER.createStatement(sql))).isEqualTo(sql);

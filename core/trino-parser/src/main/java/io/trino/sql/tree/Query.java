@@ -33,6 +33,7 @@ public class Query
     private final Optional<OrderBy> orderBy;
     private final Optional<Offset> offset;
     private final Optional<Node> limit;
+    private final List<PipeOperator> pipeOperators;
 
     @Deprecated
     public Query(
@@ -44,7 +45,7 @@ public class Query
             Optional<Offset> offset,
             Optional<Node> limit)
     {
-        this(Optional.empty(), sessionProperties, functions, with, queryBody, orderBy, offset, limit);
+        this(Optional.empty(), sessionProperties, functions, with, queryBody, orderBy, offset, limit, ImmutableList.of());
     }
 
     public Query(
@@ -55,9 +56,10 @@ public class Query
             QueryBody queryBody,
             Optional<OrderBy> orderBy,
             Optional<Offset> offset,
-            Optional<Node> limit)
+            Optional<Node> limit,
+            List<PipeOperator> pipeOperators)
     {
-        this(Optional.of(location), sessionProperties, functions, with, queryBody, orderBy, offset, limit);
+        this(Optional.of(location), sessionProperties, functions, with, queryBody, orderBy, offset, limit, pipeOperators);
     }
 
     private Query(
@@ -68,7 +70,8 @@ public class Query
             QueryBody queryBody,
             Optional<OrderBy> orderBy,
             Optional<Offset> offset,
-            Optional<Node> limit)
+            Optional<Node> limit,
+            List<PipeOperator> pipeOperators)
     {
         super(location);
         requireNonNull(sessionProperties, "sessionProperties is null");
@@ -78,6 +81,7 @@ public class Query
         requireNonNull(orderBy, "orderBy is null");
         requireNonNull(offset, "offset is null");
         requireNonNull(limit, "limit is null");
+        requireNonNull(pipeOperators, "pipeOperators is null");
         checkArgument(!limit.isPresent() || limit.get() instanceof FetchFirst || limit.get() instanceof Limit, "limit must be optional of either FetchFirst or Limit type");
 
         this.sessionProperties = ImmutableList.copyOf(sessionProperties);
@@ -87,6 +91,7 @@ public class Query
         this.orderBy = orderBy;
         this.offset = offset;
         this.limit = limit;
+        this.pipeOperators = ImmutableList.copyOf(pipeOperators);
     }
 
     public List<SessionProperty> getSessionProperties()
@@ -124,6 +129,11 @@ public class Query
         return limit;
     }
 
+    public List<PipeOperator> getPipeOperators()
+    {
+        return pipeOperators;
+    }
+
     @Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context)
     {
@@ -141,6 +151,7 @@ public class Query
                 .addAll(orderBy.stream().toList())
                 .addAll(offset.stream().toList())
                 .addAll(limit.stream().toList())
+                .addAll(pipeOperators)
                 .build();
     }
 
@@ -155,6 +166,7 @@ public class Query
                 .add("orderBy", orderBy.orElse(null))
                 .add("offset", offset.orElse(null))
                 .add("limit", limit.orElse(null))
+                .add("pipeOperators", pipeOperators)
                 .omitNullValues()
                 .omitEmptyValues()
                 .toString();
@@ -176,13 +188,14 @@ public class Query
                 Objects.equals(queryBody, o.queryBody) &&
                 Objects.equals(orderBy, o.orderBy) &&
                 Objects.equals(offset, o.offset) &&
-                Objects.equals(limit, o.limit);
+                Objects.equals(limit, o.limit) &&
+                Objects.equals(pipeOperators, o.pipeOperators);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(sessionProperties, functions, with, queryBody, orderBy, offset, limit);
+        return Objects.hash(sessionProperties, functions, with, queryBody, orderBy, offset, limit, pipeOperators);
     }
 
     @Override

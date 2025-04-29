@@ -107,6 +107,11 @@ import io.trino.sql.tree.OrderBy;
 import io.trino.sql.tree.OrdinalityColumn;
 import io.trino.sql.tree.ParameterDeclaration;
 import io.trino.sql.tree.PatternRecognitionRelation;
+import io.trino.sql.tree.PipeLimit;
+import io.trino.sql.tree.PipeOperator;
+import io.trino.sql.tree.PipeOrderBy;
+import io.trino.sql.tree.PipeSelect;
+import io.trino.sql.tree.PipeWhere;
 import io.trino.sql.tree.PlanLeaf;
 import io.trino.sql.tree.PlanParentChild;
 import io.trino.sql.tree.PlanSiblings;
@@ -691,6 +696,13 @@ public final class SqlFormatter
             node.getOrderBy().ifPresent(orderBy -> process(orderBy, indent));
             node.getOffset().ifPresent(offset -> process(offset, indent));
             node.getLimit().ifPresent(limit -> process(limit, indent));
+
+            for (PipeOperator pipe : node.getPipeOperators()) {
+                builder.append('\n');
+                append(indent, "| ");
+                process(pipe, indent);
+            }
+
             return null;
         }
 
@@ -2600,6 +2612,36 @@ public final class SqlFormatter
                     .append(formatExpression(node.getCondition()))
                     .append("\n");
             append(indent, "END REPEAT");
+            return null;
+        }
+
+        @Override
+        protected Void visitPipeSelect(PipeSelect node, Integer indent)
+        {
+            process(node.getSelect(), indent);
+            return null;
+        }
+
+        @Override
+        protected Void visitPipeWhere(PipeWhere node, Integer indent)
+        {
+            append(indent, "WHERE " + formatExpression(node.getCondition()));
+            return null;
+        }
+
+        @Override
+        protected Void visitPipeOrderBy(PipeOrderBy node, Integer indent)
+        {
+            process(node.getOrderBy(), indent);
+            return null;
+        }
+
+        @Override
+        protected Void visitPipeLimit(PipeLimit node, Integer indent)
+        {
+            process(node.getLimit(), indent);
+            node.getOffset().ifPresent(offset ->
+                    builder.append(" OFFSET " + formatExpression(offset.getRowCount())));
             return null;
         }
 

@@ -1351,4 +1351,29 @@ public abstract class AstVisitor<R, C>
     {
         return visitNode(node, context);
     }
+
+    protected R visitPipeOperator(PipeOperator node, C context)
+    {
+        return visitNode(node, context);
+    }
+
+    protected R visitPipeSelect(PipeSelect node, C context)
+    {
+        return visitPipeOperator(node, context);
+    }
+
+    protected R visitPipeWhere(PipeWhere node, C context)
+    {
+        return visitPipeOperator(node, context);
+    }
+
+    protected R visitPipeOrderBy(PipeOrderBy node, C context)
+    {
+        return visitPipeOperator(node, context);
+    }
+
+    protected R visitPipeLimit(PipeLimit node, C context)
+    {
+        return visitPipeOperator(node, context);
+    }
 }

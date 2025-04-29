@@ -202,6 +202,11 @@ import io.trino.sql.tree.PatternRecognitionRelation;
 import io.trino.sql.tree.PatternRecognitionRelation.RowsPerMatch;
 import io.trino.sql.tree.PatternSearchMode;
 import io.trino.sql.tree.PatternVariable;
+import io.trino.sql.tree.PipeLimit;
+import io.trino.sql.tree.PipeOperator;
+import io.trino.sql.tree.PipeOrderBy;
+import io.trino.sql.tree.PipeSelect;
+import io.trino.sql.tree.PipeWhere;
 import io.trino.sql.tree.PlanLeaf;
 import io.trino.sql.tree.PlanParentChild;
 import io.trino.sql.tree.PlanSiblings;
@@ -1114,7 +1119,8 @@ class AstBuilder
                 query.getQueryBody(),
                 query.getOrderBy(),
                 query.getOffset(),
-                query.getLimit());
+                query.getLimit(),
+                query.getPipeOperators());
     }
 
     @Override
@@ -1132,7 +1138,8 @@ class AstBuilder
                 query.getQueryBody(),
                 query.getOrderBy(),
                 query.getOffset(),
-                query.getLimit());
+                query.getLimit(),
+                query.getPipeOperators());
     }
 
     @Override
@@ -1148,7 +1155,8 @@ class AstBuilder
                 body.getQueryBody(),
                 body.getOrderBy(),
                 body.getOffset(),
-                body.getLimit());
+                body.getLimit(),
+                body.getPipeOperators());
     }
 
     @Override
@@ -1195,6 +1203,8 @@ class AstBuilder
             limit = Optional.of(new Limit(getLocation(context.LIMIT()), rowCount));
         }
 
+        List<PipeOperator> pipeOperators = visit(context.pipeOperator(), PipeOperator.class);
+
         if (term instanceof QuerySpecification query) {
             // When we have a simple query specification
             // followed by order by, offset, limit or fetch,
@@ -1221,7 +1231,8 @@ class AstBuilder
                             limit),
                     Optional.empty(),
                     Optional.empty(),
-                    Optional.empty());
+                    Optional.empty(),
+                    pipeOperators);
         }
 
         return new Query(
@@ -1232,16 +1243,16 @@ class AstBuilder
                 term,
                 orderBy,
                 offset,
-                limit);
+                limit,
+                pipeOperators);
     }
 
     @Override
     public Node visitQuerySpecification(SqlBaseParser.QuerySpecificationContext context)
     {
-        List<SelectItem> selectItems = visit(context.selectItem(), SelectItem.class);
         return new QuerySpecification(
                 getLocation(context),
-                new Select(getLocation(context.SELECT()), isDistinct(context.setQuantifier()), selectItems),
+                (Select) visit(context.select()),
                 visitIfPresent(context.fromClause(), Relation.class),
                 visitIfPresent(context.where, Expression.class),
                 visitIfPresent(context.groupBy(), GroupBy.class),
@@ -1250,6 +1261,15 @@ class AstBuilder
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty());
+    }
+
+    @Override
+    public Node visitSelect(SqlBaseParser.SelectContext context)
+    {
+        return new Select(
+                getLocation(context.SELECT()),
+                isDistinct(context.setQuantifier()),
+                visit(context.selectItem(), SelectItem.class));
     }
 
     @Override
@@ -1767,6 +1787,37 @@ class AstBuilder
             timeZone = Optional.of((Expression) visit(context.expression()));
         }
         return new SetTimeZone(getLocation(context), timeZone);
+    }
+
+    // ***************** pipe operators ******************
+
+    @Override
+    public Node visitPipeSelect(SqlBaseParser.PipeSelectContext context)
+    {
+        return new PipeSelect(getLocation(context), (Select) visit(context.select()));
+    }
+
+    @Override
+    public Node visitPipeWhere(SqlBaseParser.PipeWhereContext context)
+    {
+        return new PipeWhere(getLocation(context), (Expression) visit(context.booleanExpression()));
+    }
+
+    @Override
+    public Node visitPipeOrderBy(SqlBaseParser.PipeOrderByContext context)
+    {
+        return new PipeOrderBy(getLocation(context), (OrderBy) visit(context.orderBy()));
+    }
+
+    @Override
+    public Node visitPipeLimit(SqlBaseParser.PipeLimitContext context)
+    {
+        Limit limit = new Limit(getLocation(context), (Expression) visit(context.limit));
+
+        Optional<Offset> offset = visitIfPresent(context.offset, Expression.class)
+                .map(count -> new Offset(getLocation(context.OFFSET()), count));
+
+        return new PipeLimit(getLocation(context), limit, offset);
     }
 
     // ***************** boolean expressions ******************
@@ -3850,7 +3901,7 @@ class AstBuilder
     {
         return new PropertiesCharacteristic(
                 getLocation(context),
-                 visit(context.properties().propertyAssignments().property(), Property.class));
+                visit(context.properties().propertyAssignments().property(), Property.class));
     }
 
     @Override

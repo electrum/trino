@@ -7789,6 +7789,14 @@ public class TestAnalyzer
                 .hasMessage("line 1:1: Adding fields with COMMENT is unsupported");
     }
 
+    @Test
+    public void testPipeSyntax()
+    {
+        assertFails("FROM t1 | SELECT *")
+                .hasErrorCode(NOT_SUPPORTED)
+                .hasMessage("line 1:11: Pipe syntax is not yet supported");
+    }
+
     @AfterAll
     public void tearDown()
             throws Exception

@@ -194,6 +194,11 @@ public class TestStatementBuilder
         printStatement("table a intersect table b union table c");
         printStatement("table a intersect (table b union table c)");
 
+        printStatement("from abc | where x = 5 | select x, y | order by x");
+        printStatement("from abc | limit 10 offset 5");
+        printStatement("select * from abc limit 5 | select x, rand() as y");
+        printStatement("select * from (table t | where x = 5)");
+
         printStatement("alter table foo rename to bar");
         printStatement("alter table a.b.c rename to d.e.f");
 

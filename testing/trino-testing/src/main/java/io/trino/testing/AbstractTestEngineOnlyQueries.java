@@ -6631,6 +6631,12 @@ public abstract class AbstractTestEngineOnlyQueries
                 "line 1:48: Value of RETURN must evaluate to varchar \\(actual: integer\\)");
     }
 
+    @Test
+    public void testPipeSyntax()
+    {
+        assertQueryFails("FROM region | SELECT *", "line 1:15: Pipe syntax is not yet supported");
+    }
+
     private static ZonedDateTime zonedDateTime(String value)
     {
         return ZONED_DATE_TIME_FORMAT.parse(value, ZonedDateTime::from);

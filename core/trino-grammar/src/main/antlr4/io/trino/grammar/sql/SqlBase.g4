@@ -256,7 +256,46 @@ queryNoWith
       ( (LIMIT limit=limitRowCount)
       | (FETCH (FIRST | NEXT) (fetchFirst=rowCount)? (ROW | ROWS) (ONLY | WITH TIES))
       )?
+      (('|>' | '|') pipeOperator)*
     ;
+
+pipeOperator
+    : select                                            #pipeSelect
+    // EXTEND <expr> [[AS] alias], ...
+    // SET <column> = <expression>, ...
+    // DROP <column>, ...
+    // | AS identifier                                     #pipeAs
+    | WHERE booleanExpression                           #pipeWhere
+    | LIMIT limit=rowCount (OFFSET offset=rowCount)?    #pipeLimit
+//    | AGGREGATE aggregate                               #pipeAggregate
+//    | AGGREGATE aggregate? GROUP BY aggregateGroupBy    #pipeGroupBy
+
+    // AGGREGATE <agg_expr> [[AS] alias], ...
+    // AGGREGATE [<agg_expr> [[AS] alias], ...]
+    //   GROUP BY <grouping_expr> [AS alias], ...
+    // JOIN
+    | orderBy                                           #pipeOrderBy
+    // {UNION|INTERSECT|EXCEPT} {ALL|DISTINCT}
+    //   (<query>), (<query>), ...
+    // CALL tvf(args, ...)
+    // TABLESAMPLE <method> (<size> {ROWS|PERCENT})
+    ;
+
+//aggregate
+//    : aggregateExpression (',' aggregateExpression)*
+//    ;
+//
+//aggregateExpression
+//    : expression (AS? identifier)?
+//    ;
+//
+//aggregateGroupBy
+//    : aggregateGroupByExpression (',' aggregateGroupByExpression)*
+//    ;
+//
+//aggregateGroupByExpression
+//    : expression (AS identifier)?
+//    ;
 
 orderBy
     : ORDER BY sortItem (',' sortItem)*
@@ -295,12 +334,16 @@ sortItem
     ;
 
 querySpecification
-    : SELECT setQuantifier? selectItem (',' selectItem)*
+    : select
       fromClause?
       (WHERE where=booleanExpression)?
       (GROUP BY groupBy)?
       (HAVING having=booleanExpression)?
       (WINDOW windowDefinition (',' windowDefinition)*)?
+    ;
+
+select
+    : SELECT setQuantifier? selectItem (',' selectItem)*
     ;
 
 fromClause
@@ -1011,7 +1054,7 @@ authorizationUser
 
 nonReserved
     // IMPORTANT: this rule must only contain tokens. Nested rules are not supported. See SqlParser.exitNonReserved
-    : ABSENT | ADD | ADMIN | AFTER | ALL | ANALYZE | ANY | ARRAY | ASC | AT | AUTHORIZATION
+    : ABSENT | ADD | ADMIN | AFTER | AGGREGATE | ALL | ANALYZE | ANY | ARRAY | ASC | AT | AUTHORIZATION
     | BEGIN | BERNOULLI | BOTH
     | CALL | CALLED | CASCADE | CATALOG | CATALOGS | COLUMN | COLUMNS | COMMENT | COMMIT | COMMITTED | CONDITIONAL | COPARTITION | CORRESPONDING | COUNT | CURRENT
     | DATA | DATE | DAY | DECLARE | DEFAULT | DEFINE | DEFINER | DENY | DESC | DESCRIPTOR | DETERMINISTIC | DISTRIBUTED | DO | DOUBLE
@@ -1043,6 +1086,7 @@ ABSENT: 'ABSENT';
 ADD: 'ADD';
 ADMIN: 'ADMIN';
 AFTER: 'AFTER';
+AGGREGATE: 'AGGREGATE';
 ALL: 'ALL';
 ALTER: 'ALTER';
 ANALYZE: 'ANALYZE';

@@ -30,6 +30,7 @@ public class TestSqlKeywords
                         "ADD",
                         "ADMIN",
                         "AFTER",
+                        "AGGREGATE",
                         "ALL",
                         "ALTER",
                         "ANALYZE",

@@ -1577,6 +1577,10 @@ class StatementAnalyzer
                 }
             }
 
+            if (!node.getPipeOperators().isEmpty()) {
+                throw semanticException(NOT_SUPPORTED, node.getPipeOperators().getFirst(), "Pipe syntax is not yet supported");
+            }
+
             // Input fields == Output fields
             analysis.setSelectExpressions(
                     node,
