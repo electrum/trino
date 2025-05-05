@@ -3101,11 +3101,11 @@ class StatementAnalyzer
 
             node.getWhere().ifPresent(where -> analyzeWhere(node, sourceScope, where));
 
-            List<Expression> outputExpressions = analyzeSelect(node, sourceScope);
+            List<Expression> outputExpressions = analyzeSelect(node, node.getSelect(), sourceScope);
             GroupingSetAnalysis groupByAnalysis = analyzeGroupBy(node, sourceScope, outputExpressions);
             analyzeHaving(node, sourceScope);
 
-            Scope outputScope = computeAndAssignOutputScope(node, scope, sourceScope);
+            Scope outputScope = computeAndAssignOutputScope(node, node.getSelect(), scope, sourceScope);
 
             List<Expression> orderByExpressions = emptyList();
             Optional<Scope> orderByScope = Optional.empty();
@@ -4652,11 +4652,11 @@ class StatementAnalyzer
             return !aggregates.isEmpty();
         }
 
-        private Scope computeAndAssignOutputScope(QuerySpecification node, Optional<Scope> scope, Scope sourceScope)
+        private Scope computeAndAssignOutputScope(Node node, Select select, Optional<Scope> scope, Scope sourceScope)
         {
             ImmutableList.Builder<Field> outputFields = ImmutableList.builder();
 
-            for (SelectItem item : node.getSelect().getSelectItems()) {
+            for (SelectItem item : select.getSelectItems()) {
                 if (item instanceof AllColumns allColumns) {
                     List<Field> fields = analysis.getSelectAllResultFields(allColumns);
                     checkNotNull(fields, "output fields is null for select item %s", item);
@@ -4733,17 +4733,17 @@ class StatementAnalyzer
             return orderByScope;
         }
 
-        private List<Expression> analyzeSelect(QuerySpecification node, Scope scope)
+        private List<Expression> analyzeSelect(Node node, Select select, Scope scope)
         {
             ImmutableList.Builder<Expression> outputExpressionBuilder = ImmutableList.builder();
             ImmutableList.Builder<SelectExpression> selectExpressionBuilder = ImmutableList.builder();
 
-            for (SelectItem item : node.getSelect().getSelectItems()) {
+            for (SelectItem item : select.getSelectItems()) {
                 if (item instanceof AllColumns allColumns) {
-                    analyzeSelectAllColumns(allColumns, node, scope, outputExpressionBuilder, selectExpressionBuilder);
+                    analyzeSelectAllColumns(allColumns, node, select, scope, outputExpressionBuilder, selectExpressionBuilder);
                 }
                 else if (item instanceof SingleColumn singleColumn) {
-                    analyzeSelectSingleColumn(singleColumn, node, scope, outputExpressionBuilder, selectExpressionBuilder);
+                    analyzeSelectSingleColumn(singleColumn, node, select, scope, outputExpressionBuilder, selectExpressionBuilder);
                 }
                 else {
                     throw new IllegalArgumentException("Unsupported SelectItem type: " + item.getClass().getName());
@@ -4756,7 +4756,8 @@ class StatementAnalyzer
 
         private void analyzeSelectAllColumns(
                 AllColumns allColumns,
-                QuerySpecification node,
+                Node node,
+                Select select,
                 Scope scope,
                 ImmutableList.Builder<Expression> outputExpressionBuilder,
                 ImmutableList.Builder<SelectExpression> selectExpressionBuilder)
@@ -4785,7 +4786,7 @@ class StatementAnalyzer
                         analyzeAllColumnsFromTable(
                                 fields,
                                 allColumns,
-                                node,
+                                select,
                                 local ? scope : identifierChainBasis.getScope().get(),
                                 outputExpressionBuilder,
                                 selectExpressionBuilder,
@@ -4795,7 +4796,7 @@ class StatementAnalyzer
                     }
                 }
                 // identifierChainBasis.get().getBasisType == FIELD or target expression isn't a QualifiedName
-                analyzeAllFieldsFromRowTypeExpression(expression, allColumns, node, scope, outputExpressionBuilder, selectExpressionBuilder);
+                analyzeAllFieldsFromRowTypeExpression(expression, allColumns, node, select, scope, outputExpressionBuilder, selectExpressionBuilder);
             }
             else {
                 // analyze AllColumns without target expression ('*')
@@ -4806,7 +4807,7 @@ class StatementAnalyzer
                 List<Field> requestedFields = (List<Field>) scope.getRelationType().getVisibleFields();
                 List<Field> fields = filterInaccessibleFields(requestedFields);
                 if (fields.isEmpty()) {
-                    if (node.getFrom().isEmpty()) {
+                    if (node instanceof QuerySpecification query && query.getFrom().isEmpty()) {
                         throw semanticException(COLUMN_NOT_FOUND, allColumns, "SELECT * not allowed in queries without FROM clause");
                     }
                     if (!requestedFields.isEmpty()) {
@@ -4815,7 +4816,7 @@ class StatementAnalyzer
                     throw semanticException(COLUMN_NOT_FOUND, allColumns, "SELECT * not allowed from relation that has no columns");
                 }
 
-                analyzeAllColumnsFromTable(fields, allColumns, node, scope, outputExpressionBuilder, selectExpressionBuilder, scope.getRelationType(), true);
+                analyzeAllColumnsFromTable(fields, allColumns, select, scope, outputExpressionBuilder, selectExpressionBuilder, scope.getRelationType(), true);
             }
         }
 
@@ -4863,7 +4864,7 @@ class StatementAnalyzer
         private void analyzeAllColumnsFromTable(
                 List<Field> fields,
                 AllColumns allColumns,
-                QuerySpecification node,
+                Select select,
                 Scope scope,
                 ImmutableList.Builder<Expression> outputExpressionBuilder,
                 ImmutableList.Builder<SelectExpression> selectExpressionBuilder,
@@ -4884,7 +4885,7 @@ class StatementAnalyzer
                 }
                 else {
                     if (field.getName().isEmpty()) {
-                        throw semanticException(NOT_SUPPORTED, node.getSelect(), "SELECT * from outer scope table not supported with anonymous columns");
+                        throw semanticException(NOT_SUPPORTED, select, "SELECT * from outer scope table not supported with anonymous columns");
                     }
                     checkState(field.getRelationAlias().isPresent(), "missing relation alias");
                     fieldExpression = new DereferenceExpression(DereferenceExpression.from(field.getRelationAlias().get()), new Identifier(field.getName().get()));
@@ -4910,8 +4911,8 @@ class StatementAnalyzer
                 analysis.addSourceColumns(newField, analysis.getSourceColumns(field));
 
                 Type type = field.getType();
-                if (node.getSelect().isDistinct() && !type.isComparable()) {
-                    throw semanticException(TYPE_MISMATCH, node.getSelect(), "DISTINCT can only be applied to comparable types (actual: %s)", type);
+                if (select.isDistinct() && !type.isComparable()) {
+                    throw semanticException(TYPE_MISMATCH, select, "DISTINCT can only be applied to comparable types (actual: %s)", type);
                 }
             }
             analysis.setSelectAllResultFields(allColumns, itemOutputFieldBuilder.build());
@@ -4920,7 +4921,8 @@ class StatementAnalyzer
         private void analyzeAllFieldsFromRowTypeExpression(
                 Expression expression,
                 AllColumns allColumns,
-                QuerySpecification node,
+                Node node,
+                Select select,
                 Scope scope,
                 ImmutableList.Builder<Expression> outputExpressionBuilder,
                 ImmutableList.Builder<SelectExpression> selectExpressionBuilder)
@@ -4930,7 +4932,7 @@ class StatementAnalyzer
             ExpressionAnalysis expressionAnalysis = analyzeExpression(expression, scope);
             Type type = expressionAnalysis.getType(expression);
             if (!(type instanceof RowType rowType)) {
-                throw semanticException(TYPE_MISMATCH, node.getSelect(), "expected expression of type Row");
+                throw semanticException(TYPE_MISMATCH, select, "expected expression of type Row");
             }
             int referencedFieldsCount = rowType.getFields().size();
             if (!allColumns.getAliases().isEmpty()) {
@@ -4946,8 +4948,8 @@ class StatementAnalyzer
                 unfoldedExpressionsBuilder.add(outputExpression);
 
                 Type outputExpressionType = type.getTypeParameters().get(i);
-                if (node.getSelect().isDistinct() && !outputExpressionType.isComparable()) {
-                    throw semanticException(TYPE_MISMATCH, node.getSelect(), "DISTINCT can only be applied to comparable types (actual: %s)", type.getTypeParameters().get(i));
+                if (select.isDistinct() && !outputExpressionType.isComparable()) {
+                    throw semanticException(TYPE_MISMATCH, select, "DISTINCT can only be applied to comparable types (actual: %s)", type.getTypeParameters().get(i));
                 }
 
                 Optional<String> name = ((RowType) type).getFields().get(i).getName();
@@ -4962,7 +4964,8 @@ class StatementAnalyzer
 
         private void analyzeSelectSingleColumn(
                 SingleColumn singleColumn,
-                QuerySpecification node,
+                Node node,
+                Select select,
                 Scope scope,
                 ImmutableList.Builder<Expression> outputExpressionBuilder,
                 ImmutableList.Builder<SelectExpression> selectExpressionBuilder)
@@ -4974,12 +4977,8 @@ class StatementAnalyzer
             selectExpressionBuilder.add(new SelectExpression(expression, Optional.empty()));
 
             Type type = expressionAnalysis.getType(expression);
-            if (node.getSelect().isDistinct() && !type.isComparable()) {
-                throw semanticException(
-                        TYPE_MISMATCH, node.getSelect(),
-                        "DISTINCT can only be applied to comparable types (actual: %s): %s",
-                        type,
-                        expression);
+            if (select.isDistinct() && !type.isComparable()) {
+                throw semanticException(TYPE_MISMATCH, select, "DISTINCT can only be applied to comparable types (actual: %s): %s", type, expression);
             }
         }
 
