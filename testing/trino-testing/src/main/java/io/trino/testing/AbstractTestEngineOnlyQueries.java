@@ -6634,7 +6634,20 @@ public abstract class AbstractTestEngineOnlyQueries
     @Test
     public void testPipeSyntax()
     {
-        assertQueryFails("FROM region | SELECT *", "line 1:15: Pipe syntax is not yet supported");
+        assertThat(query("FROM region | SELECT name, regionkey"))
+                .matches("SELECT name, regionkey FROM region");
+
+        assertThat(query("FROM region | WHERE name = 'ASIA'"))
+                .matches("SELECT * FROM region WHERE name = 'ASIA'");
+
+        assertThat(query("FROM region | SELECT lower(name) x | WHERE x = 'asia'"))
+                .matches("SELECT * FROM (SELECT lower(name) x FROM region) WHERE x = 'asia'");
+
+        assertThat(query("FROM region | ORDER BY name DESC"))
+                .matches("SELECT * FROM region ORDER BY name DESC");
+
+        assertThat(query("FROM region | ORDER BY name | LIMIT 2 OFFSET 1"))
+                .matches("SELECT * FROM region ORDER BY name OFFSET 1 LIMIT 2");
     }
 
     private static ZonedDateTime zonedDateTime(String value)

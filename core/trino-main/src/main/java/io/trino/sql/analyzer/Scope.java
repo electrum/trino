@@ -13,6 +13,7 @@
  */
 package io.trino.sql.analyzer;
 
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableMap;
 import com.google.errorprone.annotations.Immutable;
 import io.trino.spi.type.RowType;
@@ -20,6 +21,7 @@ import io.trino.sql.tree.AllColumns;
 import io.trino.sql.tree.Expression;
 import io.trino.sql.tree.QualifiedName;
 import io.trino.sql.tree.WithQuery;
+import org.assertj.core.util.Throwables;
 
 import java.util.HashMap;
 import java.util.List;
@@ -325,6 +327,8 @@ public class Scope
     {
         return toStringHelper(this)
                 .addValue(relationId)
+                .add("parent", parent.orElse(null))
+                .omitNullValues()
                 .toString();
     }
 
@@ -382,7 +386,20 @@ public class Scope
 
         public Scope build()
         {
-            return new Scope(parent, queryBoundary, relationId, relationType, namedQueries);
+            Scope scope = new Scope(parent, queryBoundary, relationId, relationType, namedQueries);
+
+            String trace = Throwables.getStackTrace(new RuntimeException("CREATED SCOPE: " + scope));
+            StringBuilder sb = new StringBuilder();
+            List<String> lines = Splitter.on('\n').splitToList(trace);
+            for (String line : lines) {
+                if (line.contains("SqlQueryExecution")) {
+                    break;
+                }
+                sb.append(line).append('\n');
+            }
+            System.out.println(sb);
+
+            return scope;
         }
     }
 

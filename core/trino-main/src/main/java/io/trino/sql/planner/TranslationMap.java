@@ -640,6 +640,10 @@ public class TranslationMap
             return symbol.toSymbolReference();
         }
 
+        if (getSymbolForColumn(expression).isEmpty()) {
+            System.out.println(getSymbolForColumn(expression));
+        }
+
         return getSymbolForColumn(expression)
                 .map(Symbol::toSymbolReference)
                 .get();
@@ -1266,6 +1270,8 @@ public class TranslationMap
         }
 
         ResolvedField field = analysis.getColumnReferenceFields().get(NodeRef.of(expression));
+
+        System.out.println("IS_LOCAL_SCOPE=%s [%s] scope=%s field=%s%n".formatted(scope.isLocalScope(field.getScope()), expression, scope, field.getScope()));
 
         if (scope.isLocalScope(field.getScope())) {
             return Optional.of(fieldSymbols[field.getHierarchyFieldIndex()]);

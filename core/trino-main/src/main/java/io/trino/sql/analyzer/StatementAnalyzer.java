@@ -204,6 +204,11 @@ import io.trino.sql.tree.OrderBy;
 import io.trino.sql.tree.OrdinalityColumn;
 import io.trino.sql.tree.Parameter;
 import io.trino.sql.tree.PatternRecognitionRelation;
+import io.trino.sql.tree.PipeLimit;
+import io.trino.sql.tree.PipeOperator;
+import io.trino.sql.tree.PipeOrderBy;
+import io.trino.sql.tree.PipeSelect;
+import io.trino.sql.tree.PipeWhere;
 import io.trino.sql.tree.PlanLeaf;
 import io.trino.sql.tree.PlanParentChild;
 import io.trino.sql.tree.PlanSiblings;
@@ -1554,9 +1559,8 @@ class StatementAnalyzer
             Scope withScope = analyzeWith(node, scope);
             Scope queryBodyScope = process(node.getQueryBody(), withScope);
 
-            List<Expression> orderByExpressions = emptyList();
             if (node.getOrderBy().isPresent()) {
-                orderByExpressions = analyzeOrderBy(node, getSortItemsFromOrderBy(node.getOrderBy()), queryBodyScope);
+                analyzeOrderBy(node, getSortItemsFromOrderBy(node.getOrderBy()), queryBodyScope);
 
                 if ((queryBodyScope.getOuterQueryParent().isPresent() || !isTopLevel) && node.getLimit().isEmpty() && node.getOffset().isEmpty()) {
                     // not the root scope and ORDER BY is ineffective
@@ -1564,7 +1568,9 @@ class StatementAnalyzer
                     warningCollector.add(new TrinoWarning(REDUNDANT_ORDER_BY, "ORDER BY in subquery may have no effect"));
                 }
             }
-            analysis.setOrderByExpressions(node, orderByExpressions);
+            else {
+                analysis.setOrderByExpressions(node, ImmutableList.of());
+            }
 
             if (node.getOffset().isPresent()) {
                 analyzeOffset(node.getOffset().get(), queryBodyScope);
@@ -1575,10 +1581,6 @@ class StatementAnalyzer
                 if (requiresOrderBy && node.getOrderBy().isEmpty()) {
                     throw semanticException(MISSING_ORDER_BY, node.getLimit().get(), "FETCH FIRST WITH TIES clause requires ORDER BY");
                 }
-            }
-
-            if (!node.getPipeOperators().isEmpty()) {
-                throw semanticException(NOT_SUPPORTED, node.getPipeOperators().getFirst(), "Pipe syntax is not yet supported");
             }
 
             // Input fields == Output fields
@@ -1592,6 +1594,32 @@ class StatementAnalyzer
                     .withParent(withScope)
                     .withRelationType(RelationId.of(node), queryBodyScope.getRelationType())
                     .build();
+
+            if (!node.getPipeOperators().isEmpty()) {
+                // pipe operators only see the output fields of the previous operator
+//                Scope.Builder builder = Scope.builder();
+//                queryScope.getLocalParent().ifPresent(builder::withParent);
+//                queryScope = builder
+//                        .withRelationType(queryScope.getRelationId(), queryScope.getRelationType())
+//                        .build();
+
+                for (PipeOperator operator : node.getPipeOperators()) {
+                    switch (operator) {
+                        case PipeLimit pipe -> {
+                            analyzeLimit(pipe.getLimit(), queryScope);
+                            if (pipe.getOffset().isPresent()) {
+                                analyzeOffset(pipe.getOffset().get(), queryScope);
+                            }
+                        }
+                        case PipeOrderBy pipe -> analyzeOrderBy(pipe, pipe.getOrderBy().getSortItems(), queryScope);
+                        case PipeSelect pipe -> {
+                            analyzeSelect(pipe, pipe.getSelect(), queryScope);
+                            queryScope = computeAndAssignOutputScope(pipe, pipe.getSelect(), Optional.empty(), queryScope);
+                        }
+                        case PipeWhere pipe -> analyzeWhere(pipe, queryScope, pipe.getCondition());
+                    }
+                }
+            }
 
             analysis.setScope(node, queryScope);
             return queryScope;
@@ -3121,7 +3149,9 @@ class StatementAnalyzer
                     warningCollector.add(new TrinoWarning(REDUNDANT_ORDER_BY, "ORDER BY in subquery may have no effect"));
                 }
             }
-            analysis.setOrderByExpressions(node, orderByExpressions);
+            else {
+                analysis.setOrderByExpressions(node, ImmutableList.of());
+            }
 
             if (node.getOffset().isPresent()) {
                 analyzeOffset(node.getOffset().get(), outputScope);
@@ -4719,6 +4749,7 @@ class StatementAnalyzer
                 }
             }
 
+            System.out.println("OUTPUT_FIELDS: " + outputFields.build());
             return createAndAssignScope(node, scope, outputFields.build());
         }
 
@@ -5782,7 +5813,9 @@ class StatementAnalyzer
                 orderByFieldsBuilder.add(expression);
             }
 
-            return orderByFieldsBuilder.build();
+            List<Expression> expressions = orderByFieldsBuilder.build();
+            analysis.setOrderByExpressions(node, expressions);
+            return expressions;
         }
 
         private void analyzeOffset(Offset node, Scope scope)

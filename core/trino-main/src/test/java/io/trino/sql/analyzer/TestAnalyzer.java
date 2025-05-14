@@ -7792,9 +7792,11 @@ public class TestAnalyzer
     @Test
     public void testPipeSyntax()
     {
-        assertFails("FROM t1 | SELECT *")
-                .hasErrorCode(NOT_SUPPORTED)
-                .hasMessage("line 1:11: Pipe syntax is not yet supported");
+        analyze("FROM t1 | SELECT *");
+        analyze("FROM t1 | SELECT a, b");
+        analyze("FROM t1 | WHERE a = 5");
+        analyze("FROM t1 | ORDER BY a, b");
+        analyze("FROM t1 | LIMIT 10 OFFSET 5");
     }
 
     @AfterAll

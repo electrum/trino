@@ -99,6 +99,11 @@ import io.trino.sql.tree.Node;
 import io.trino.sql.tree.NodeRef;
 import io.trino.sql.tree.Offset;
 import io.trino.sql.tree.OrderBy;
+import io.trino.sql.tree.PipeLimit;
+import io.trino.sql.tree.PipeOperator;
+import io.trino.sql.tree.PipeOrderBy;
+import io.trino.sql.tree.PipeSelect;
+import io.trino.sql.tree.PipeWhere;
 import io.trino.sql.tree.Query;
 import io.trino.sql.tree.QuerySpecification;
 import io.trino.sql.tree.Relation;
@@ -240,6 +245,26 @@ class QueryPlanner
         builder = offset(builder, query.getOffset());
         builder = limit(builder, query.getLimit(), orderingScheme);
         builder = builder.appendProjections(outputs, symbolAllocator, idAllocator);
+
+        for (PipeOperator operator : query.getPipeOperators()) {
+            switch (operator) {
+                case PipeSelect pipe -> {
+                    outputs = analysis.getSelectExpressions(pipe).stream()
+                            .map(SelectExpression::getExpression)
+                            .toList();
+                    builder = builder.appendProjections(outputs, symbolAllocator, idAllocator);
+                }
+                case PipeLimit pipe -> {
+                    builder = offset(builder, pipe.getOffset());
+                    builder = limit(builder, Optional.of(pipe.getLimit()), Optional.empty());
+                }
+                case PipeOrderBy pipe -> {
+                    var ordering = orderingScheme(builder, Optional.of(pipe.getOrderBy()), analysis.getOrderByExpressions(pipe));
+                    builder = sort(builder, ordering);
+                }
+                case PipeWhere pipe -> builder = filter(builder, pipe.getCondition(), pipe);
+            }
+        }
 
         return new RelationPlan(
                 builder.getRoot(),

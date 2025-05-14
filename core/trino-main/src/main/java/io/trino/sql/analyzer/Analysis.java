@@ -158,6 +158,8 @@ public class Analysis
     // a map of users to the columns per table that they access
     private final Map<AccessControlInfo, Map<QualifiedObjectName, Set<String>>> tableColumnReferences = new LinkedHashMap<>();
 
+    // pipe operators
+
     // Record fields prefixed with labels in row pattern recognition context
     private final Map<NodeRef<Expression>, Optional<String>> labels = new LinkedHashMap<>();
     private final Map<NodeRef<RangeQuantifier>, Range> ranges = new LinkedHashMap<>();
