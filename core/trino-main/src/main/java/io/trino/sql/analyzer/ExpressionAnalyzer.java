@@ -67,6 +67,8 @@ import io.trino.sql.analyzer.PatternRecognitionAnalysis.Navigation;
 import io.trino.sql.analyzer.PatternRecognitionAnalysis.NavigationMode;
 import io.trino.sql.analyzer.PatternRecognitionAnalysis.PatternInputAnalysis;
 import io.trino.sql.analyzer.PatternRecognitionAnalysis.ScalarInputDescriptor;
+import io.trino.sql.ir.Cast;
+import io.trino.sql.ir.Constant;
 import io.trino.sql.tree.ArithmeticBinaryExpression;
 import io.trino.sql.tree.ArithmeticUnaryExpression;
 import io.trino.sql.tree.Array;
@@ -75,7 +77,6 @@ import io.trino.sql.tree.AtTimeZone;
 import io.trino.sql.tree.BetweenPredicate;
 import io.trino.sql.tree.BinaryLiteral;
 import io.trino.sql.tree.BooleanLiteral;
-import io.trino.sql.tree.Cast;
 import io.trino.sql.tree.CoalesceExpression;
 import io.trino.sql.tree.ComparisonExpression;
 import io.trino.sql.tree.CompositeIntervalQualifier;
@@ -2373,7 +2374,7 @@ public class ExpressionAnalyzer
         }
 
         @Override
-        public Type visitCast(Cast node, Context context)
+        public Type visitCast(io.trino.sql.tree.Cast node, Context context)
         {
             Type type;
             try {
@@ -4026,7 +4027,7 @@ public class ExpressionAnalyzer
         }
 
         plannerContext.getExpressionEvaluator().evaluate(
-                new io.trino.sql.ir.Cast(new io.trino.sql.ir.Constant(literalType, value), type),
+                new Cast(new Constant(literalType, value), type),
                 session,
                 ImmutableMap.of());
     }
