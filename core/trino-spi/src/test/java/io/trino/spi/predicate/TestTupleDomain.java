@@ -51,7 +51,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class TestTupleDomain
 {
-    public record TestingColumnHandle(String name) implements ColumnHandle {}
+    public record TestingColumnHandle(String name)
+            implements ColumnHandle {}
 
     private static final ColumnHandle A = new TestingColumnHandle("a");
     private static final ColumnHandle B = new TestingColumnHandle("b");
@@ -808,17 +809,20 @@ class TestTupleDomain
         testAsPredicate(bPositive, Map.of(A, doubleNull), true);
 
         // constraint and binding keys intersecting
-        testAsPredicate(abPositive,
+        testAsPredicate(
+                abPositive,
                 Map.of(
                         B, doubleZero,
                         C, doubleOne),
                 false);
-        testAsPredicate(abPositive,
+        testAsPredicate(
+                abPositive,
                 Map.of(
                         B, doubleOne,
                         C, doubleOne),
                 true);
-        testAsPredicate(abPositive,
+        testAsPredicate(
+                abPositive,
                 Map.of(
                         B, doubleOne,
                         C, doubleZero),
