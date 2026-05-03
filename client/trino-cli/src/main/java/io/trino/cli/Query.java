@@ -147,7 +147,7 @@ public class Query
     public boolean renderOutput(Terminal terminal, PrintStream out, PrintStream errorChannel, OutputFormat outputFormat, Optional<String> pager, boolean showProgress, boolean decimalDataSize)
     {
         Thread clientThread = Thread.currentThread();
-        SignalHandler oldHandler = terminal.handle(Signal.INT, signal -> {
+        SignalHandler oldHandler = terminal.handle(Signal.INT, _ -> {
             if (ignoreUserInterrupt.get() || client.isClientAborted()) {
                 return;
             }

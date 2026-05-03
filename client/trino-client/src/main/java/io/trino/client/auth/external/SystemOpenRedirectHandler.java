@@ -80,7 +80,7 @@ public class SystemOpenRedirectHandler
         for (String path : paths) {
             File[] found = Path.of(path)
                     .toFile()
-                    .listFiles((dir, name) -> LINUX_BROWSERS.contains(name));
+                    .listFiles((_, name) -> LINUX_BROWSERS.contains(name));
 
             if (found == null) {
                 continue;

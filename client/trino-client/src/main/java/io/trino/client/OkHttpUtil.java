@@ -217,7 +217,7 @@ public final class OkHttpUtil
             sslContext.init(null, new TrustManager[] {trustAllCerts}, new SecureRandom());
 
             clientBuilder.sslSocketFactory(sslContext.getSocketFactory(), trustAllCerts);
-            clientBuilder.hostnameVerifier((hostname, session) -> true);
+            clientBuilder.hostnameVerifier((_, _) -> true);
         }
         catch (GeneralSecurityException e) {
             throw new ClientException("Error setting up SSL: " + e.getMessage(), e);
@@ -410,7 +410,7 @@ public final class OkHttpUtil
 
     public static void setupAlternateHostnameVerification(OkHttpClient.Builder clientBuilder, String alternativeHostname)
     {
-        clientBuilder.hostnameVerifier((hostname, session) -> LegacyHostnameVerifier.INSTANCE.verify(alternativeHostname, session));
+        clientBuilder.hostnameVerifier((_, session) -> LegacyHostnameVerifier.INSTANCE.verify(alternativeHostname, session));
     }
 
     private static GSSContextProvider getDelegatedGSSContextProvider(Optional<GSSCredential> gssCredential)

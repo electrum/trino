@@ -160,9 +160,9 @@ abstract class AbstractConnectionProperty<V, T>
         return false;
     }
 
-    protected static final Predicate<Properties> NOT_REQUIRED = properties -> false;
+    protected static final Predicate<Properties> NOT_REQUIRED = _ -> false;
 
-    protected static final Validator<Properties> ALLOWED = properties -> Optional.empty();
+    protected static final Validator<Properties> ALLOWED = _ -> Optional.empty();
 
     interface Converter<V, T>
     {

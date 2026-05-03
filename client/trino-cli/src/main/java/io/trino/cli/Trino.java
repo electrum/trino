@@ -66,7 +66,7 @@ public final class Trino
                 .registerConverter(HostAndPort.class, HostAndPort::fromString)
                 .registerConverter(Duration.class, Duration::valueOf)
                 .setResourceBundle(new TrinoResourceBundle())
-                .setExecutionExceptionHandler((e, cmd, parseResult) -> {
+                .setExecutionExceptionHandler((e, _, parseResult) -> {
                     System.err.println(formatCliErrorMessage(e, parseResult.hasMatchedOption(DEBUG_OPTION_NAME)));
                     return 1;
                 });

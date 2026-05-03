@@ -72,7 +72,7 @@ public class TestExternalAuthentication
     {
         RedirectHandler redirectHandler = new MockRedirectHandler();
 
-        TokenPoller poller = MockTokenPoller.onPoll(tokenUri -> {
+        TokenPoller poller = MockTokenPoller.onPoll(_ -> {
             sleepUninterruptibly(Duration.ofMillis(20));
             return TokenPollResult.pending(TOKEN_URI);
         });
@@ -102,7 +102,7 @@ public class TestExternalAuthentication
     {
         RedirectHandler redirectHandler = new MockRedirectHandler();
 
-        TokenPoller poller = MockTokenPoller.onPoll(uri -> {
+        TokenPoller poller = MockTokenPoller.onPoll(_ -> {
             throw new UncheckedIOException(new IOException("polling error"));
         });
 

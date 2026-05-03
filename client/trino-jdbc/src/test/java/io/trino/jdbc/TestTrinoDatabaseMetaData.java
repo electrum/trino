@@ -2169,7 +2169,7 @@ public class TestTrinoDatabaseMetaData
         assertMetadataCalls(
                 connection,
                 callback,
-                actual -> {},
+                _ -> {},
                 expectedMetadataCallsCount);
     }
 

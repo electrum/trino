@@ -72,7 +72,7 @@ public final class OutputHandler
                 }
                 client.advance();
             }
-        }).whenComplete((result, ex) -> putOrThrow(rowQueue, END_TOKEN));
+        }).whenComplete((_, _) -> putOrThrow(rowQueue, END_TOKEN));
 
         List<List<?>> rowBuffer = new ArrayList<>(maxBufferedRows);
         long bufferStart = System.nanoTime();

@@ -143,7 +143,7 @@ public class TestExternalAuthenticator
     {
         MockTokenPoller tokenPoller = new MockTokenPoller()
                 .withResult(URI.create("http://token.uri"), successful(new Token("valid-token")));
-        ExternalAuthenticator authenticator = new ExternalAuthenticator(uri -> {}, tokenPoller, KnownToken.local(), Duration.ofSeconds(1));
+        ExternalAuthenticator authenticator = new ExternalAuthenticator(_ -> {}, tokenPoller, KnownToken.local(), Duration.ofSeconds(1));
 
         Request authenticated = authenticator.authenticate(null, getUnauthorizedResponse("Bearer x_token_server=\"http://token.uri\""));
 
@@ -157,7 +157,7 @@ public class TestExternalAuthenticator
         MockTokenPoller tokenPoller = new MockTokenPoller()
                 .withResult(URI.create("http://token.uri"), successful(new Token("first-token")))
                 .withResult(URI.create("http://token.uri"), successful(new Token("second-token")));
-        ExternalAuthenticator authenticator = new ExternalAuthenticator(uri -> {}, tokenPoller, KnownToken.local(), Duration.ofSeconds(1));
+        ExternalAuthenticator authenticator = new ExternalAuthenticator(_ -> {}, tokenPoller, KnownToken.local(), Duration.ofSeconds(1));
 
         Request request = authenticator.authenticate(null, getUnauthorizedResponse("Bearer x_token_server=\"http://token.uri\""));
         Request reAuthenticated = authenticator.authenticate(null, getUnauthorizedResponse("Bearer x_token_server=\"http://token.uri\"", request));

@@ -75,7 +75,7 @@ public final class QueryPreprocessor
             throws QueryPreprocessorException
     {
         Thread clientThread = Thread.currentThread();
-        SignalHandler oldHandler = terminal.handle(Signal.INT, signal -> clientThread.interrupt());
+        SignalHandler oldHandler = terminal.handle(Signal.INT, _ -> clientThread.interrupt());
         try {
             if (isRealTerminal()) {
                 System.out.print(PREPROCESSING_QUERY_MESSAGE);

@@ -696,7 +696,7 @@ public class TestJdbcConnection
         Connection connection = createConnection();
         connection.setAutoCommit(autoCommit);
         futures = range(0, 10)
-                .mapToObj(i -> executor.submit(() -> {
+                .mapToObj(_ -> executor.submit(() -> {
                     try (Statement statement = connection.createStatement();
                             ResultSet resultSet = statement.executeQuery(sql)) {
                         //noinspection StatementWithEmptyBody

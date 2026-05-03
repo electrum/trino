@@ -46,7 +46,7 @@ public final class MockTokenPoller
 
     public MockTokenPoller withResult(URI tokenUri, TokenPollResult result)
     {
-        results.compute(tokenUri, (uri, queue) -> {
+        results.compute(tokenUri, (_, queue) -> {
             if (queue == null) {
                 return new LinkedBlockingDeque<>(ImmutableList.of(result));
             }

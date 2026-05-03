@@ -155,7 +155,7 @@ public class HttpClientFactory
             }
 
             if (sslVerificationMode.equals(CA)) {
-                builder.hostnameVerifier((hostname, session) -> true);
+                builder.hostnameVerifier((_, _) -> true);
             }
 
             if (sslVerificationMode.equals(NONE)) {
