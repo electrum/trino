@@ -345,7 +345,7 @@ public class TestEsriDeserializer
                 "2025-3-3 00:00:00.000", // without leading zeros
                 "2025-3-3 00:00:00",
                 "2025-3-3 00:00",
-                "2025-3-3"
+                "2025-3-3",
         };
 
         String[] invalidTimestampFormats = {
