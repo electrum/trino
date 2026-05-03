@@ -556,8 +556,10 @@ public abstract class BaseSingleStoreTypeMapping
                 .addRoundTrip("text " + CHARACTER_SET_UTF8, sampleUnicodeLiteral, createVarcharType(65535), "CAST(" + sampleUnicodeLiteral + " AS varchar(65535))")
                 .addRoundTrip("mediumtext " + CHARACTER_SET_UTF8, sampleUnicodeLiteral, createVarcharType(16777215), "CAST(" + sampleUnicodeLiteral + " AS varchar(16777215))")
                 .addRoundTrip("longtext " + CHARACTER_SET_UTF8, sampleUnicodeLiteral, createUnboundedVarcharType(), "CAST(" + sampleUnicodeLiteral + " AS varchar)")
-                .addRoundTrip("varchar(" + sampleUnicodeLiteral.length() + ") " + CHARACTER_SET_UTF8, sampleUnicodeLiteral,
-                        createVarcharType(sampleUnicodeLiteral.length()), "CAST(" + sampleUnicodeLiteral + " AS varchar(" + sampleUnicodeLiteral.length() + "))")
+                .addRoundTrip("varchar(" + sampleUnicodeLiteral.length() + ") " + CHARACTER_SET_UTF8,
+                        sampleUnicodeLiteral,
+                        createVarcharType(sampleUnicodeLiteral.length()),
+                        "CAST(" + sampleUnicodeLiteral + " AS varchar(" + sampleUnicodeLiteral.length() + "))")
                 .addRoundTrip("varchar(32) " + CHARACTER_SET_UTF8, sampleUnicodeLiteral, createVarcharType(32), "CAST(" + sampleUnicodeLiteral + " AS varchar(32))")
                 .addRoundTrip("varchar(20000) " + CHARACTER_SET_UTF8, sampleUnicodeLiteral, createVarcharType(20000), "CAST(" + sampleUnicodeLiteral + " AS varchar(20000))")
                 .execute(getQueryRunner(), singleStoreCreateAndInsert("tpch.singlestore_test_parameterized_varchar_unicode"));
@@ -825,7 +827,6 @@ public abstract class BaseSingleStoreTypeMapping
                 // null
                 .addRoundTrip("datetime", "NULL", createTimestampType(0), "CAST(NULL AS TIMESTAMP(0))")
                 .addRoundTrip("datetime(6)", "NULL", createTimestampType(6), "CAST(NULL AS TIMESTAMP(6))")
-
                 .execute(getQueryRunner(), session, singleStoreCreateAndInsert("tpch.test_datetime"));
     }
 
@@ -883,7 +884,6 @@ public abstract class BaseSingleStoreTypeMapping
                 // null
                 .addRoundTrip("timestamp", "NULL", createTimestampType(0), "CAST(NULL AS TIMESTAMP(0))")
                 .addRoundTrip("timestamp(6)", "NULL", createTimestampType(6), "CAST(NULL AS TIMESTAMP(6))")
-
                 .execute(getQueryRunner(), session, singleStoreCreateAndInsert("tpch.test_timestamp"));
     }
 
@@ -953,7 +953,6 @@ public abstract class BaseSingleStoreTypeMapping
                 // null
                 .addRoundTrip("timestamp(0)", "NULL", createTimestampType(0), "CAST(NULL AS TIMESTAMP(0))")
                 .addRoundTrip("timestamp(6)", "NULL", createTimestampType(6), "CAST(NULL AS TIMESTAMP(6))")
-
                 .execute(getQueryRunner(), session, trinoCreateAsSelect(session, "test_datetime"))
                 .execute(getQueryRunner(), session, trinoCreateAsSelect("test_datetime"))
                 .execute(getQueryRunner(), session, trinoCreateAndInsert(session, "test_datetime"))
