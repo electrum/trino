@@ -198,7 +198,7 @@ final class TestIcebergRestCatalogNestedNamespaceConnectorSmokeTest
                         CREATE VIEW iceberg."level_1.level_2".%s SECURITY DEFINER AS
                         SELECT *
                         FROM
-                          nation""".formatted(viewName));
+                        nation""".formatted(viewName));
 
         assertUpdate("DROP  VIEW " + viewName);
     }

@@ -82,7 +82,7 @@ public class TestIcebergStatistics
                       ('regionkey', null, null, 0, null, '0', '4'),
                       ('comment', 2162.0, null, 0, null, null, null),
                       ('name', 583.0, null, 0, null, null, null),
-                      (null, null, null, null, 25, null, null)""");
+                    (null, null, null, null, 25, null, null)""");
         }
 
         assertUpdate("ANALYZE " + tableName);
@@ -447,7 +447,7 @@ public class TestIcebergStatistics
                 VALUES
                   ('nationkey', null, 25, 0, null, '0', '24'),
                   ('regionkey', null, 5, 0, null, '0', '4'),
-                  (null, null, null, null, 25, null, null)""");
+                (null, null, null, null, 25, null, null)""");
 
         // remove two regions in multiple queries
         List<String> idsToRemove = computeActual("SELECT nationkey FROM tpch.sf1.nation WHERE regionkey IN (2, 4)").getOnlyColumn()

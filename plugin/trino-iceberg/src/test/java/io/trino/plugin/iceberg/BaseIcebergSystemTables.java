@@ -183,19 +183,23 @@ public abstract class BaseIcebergSystemTables
         assertThat(rowsByPartition.get(LocalDate.parse("2022-01-04")).getField(1)).isEqualTo(3L);
 
         // Test if min/max values, null value count and nan value count are computed correctly.
-        assertThat(rowsByPartition.get(LocalDate.parse("2022-01-01")).getField(4)).isEqualTo(new MaterializedRow(DEFAULT_PRECISION,
+        assertThat(rowsByPartition.get(LocalDate.parse("2022-01-01")).getField(4)).isEqualTo(new MaterializedRow(
+                DEFAULT_PRECISION,
                 new MaterializedRow(DEFAULT_PRECISION, 1L, 1L, 0L, null),
                 new MaterializedRow(DEFAULT_PRECISION, 1.1d, 1.1d, 0L, null),
                 new MaterializedRow(DEFAULT_PRECISION, 1.2f, 1.2f, 0L, null)));
-        assertThat(rowsByPartition.get(LocalDate.parse("2022-01-02")).getField(4)).isEqualTo(new MaterializedRow(DEFAULT_PRECISION,
+        assertThat(rowsByPartition.get(LocalDate.parse("2022-01-02")).getField(4)).isEqualTo(new MaterializedRow(
+                DEFAULT_PRECISION,
                 new MaterializedRow(DEFAULT_PRECISION, 2L, 2L, 0L, null),
                 new MaterializedRow(DEFAULT_PRECISION, null, null, 0L, nanCount(1L)),
                 new MaterializedRow(DEFAULT_PRECISION, 2.2f, 2.2f, 0L, null)));
-        assertThat(rowsByPartition.get(LocalDate.parse("2022-01-03")).getField(4)).isEqualTo(new MaterializedRow(DEFAULT_PRECISION,
+        assertThat(rowsByPartition.get(LocalDate.parse("2022-01-03")).getField(4)).isEqualTo(new MaterializedRow(
+                DEFAULT_PRECISION,
                 new MaterializedRow(DEFAULT_PRECISION, 3L, 3L, 0L, null),
                 new MaterializedRow(DEFAULT_PRECISION, 3.3, 3.3d, 0L, null),
                 new MaterializedRow(DEFAULT_PRECISION, null, null, 0L, nanCount(1L))));
-        assertThat(rowsByPartition.get(LocalDate.parse("2022-01-04")).getField(4)).isEqualTo(new MaterializedRow(DEFAULT_PRECISION,
+        assertThat(rowsByPartition.get(LocalDate.parse("2022-01-04")).getField(4)).isEqualTo(new MaterializedRow(
+                DEFAULT_PRECISION,
                 new MaterializedRow(DEFAULT_PRECISION, 4L, 6L, 0L, null),
                 new MaterializedRow(DEFAULT_PRECISION, null, null, 0L, nanCount(2L)),
                 new MaterializedRow(DEFAULT_PRECISION, null, null, 0L, nanCount(2L))));
@@ -224,7 +228,8 @@ public abstract class BaseIcebergSystemTables
         assertThat(resultAfterDrop.getRowCount()).isEqualTo(3);
         Map<LocalDate, MaterializedRow> rowsByPartitionAfterDrop = resultAfterDrop.getMaterializedRows().stream()
                 .collect(toImmutableMap(row -> ((LocalDate) ((MaterializedRow) row.getField(0)).getField(0)), Function.identity()));
-        assertThat(rowsByPartitionAfterDrop.get(LocalDate.parse("2019-09-08")).getField(4)).isEqualTo(new MaterializedRow(DEFAULT_PRECISION,
+        assertThat(rowsByPartitionAfterDrop.get(LocalDate.parse("2019-09-08")).getField(4)).isEqualTo(new MaterializedRow(
+                DEFAULT_PRECISION,
                 new MaterializedRow(DEFAULT_PRECISION, 0L, 0L, 0L, null)));
     }
 
@@ -950,7 +955,7 @@ public abstract class BaseIcebergSystemTables
                 ]) AS
                 SELECT
                     CAST(ROW(1, 2) AS ROW(f1 INTEGER, f2 integeR)) as r1
-                    , CAST('b' AS VARCHAR) as b1""")) {
+                , CAST('b' AS VARCHAR) as b1""")) {
             assertThat(query("SELECT partition FROM \"" + testTable.getName() + "$partitions\""))
                     .matches("SELECT CAST(ROW(1, 3) AS ROW(\"r1.f1\" INTEGER, b1_bucket INTEGER))");
         }
@@ -964,7 +969,7 @@ public abstract class BaseIcebergSystemTables
                 ]) AS
                 SELECT
                     CAST(ROW('f1', 'f2') AS ROW(f1 VARCHAR, f2 VARCHAR)) as r1
-                    , CAST('b' AS VARCHAR) as b1""")) {
+                , CAST('b' AS VARCHAR) as b1""")) {
             assertThat(query("SELECT partition FROM \"" + testTable.getName() + "$partitions\""))
                     .matches("SELECT CAST(ROW('f2', 3, 'f1') AS ROW(\"r1.f2\" VARCHAR, b1_bucket INTEGER, \"r1.f1\" VARCHAR))");
         }
