@@ -118,8 +118,8 @@ public class TestHiveAvroTypeBlockHandler
             while (avroFileReader.hasNext()) {
                 Page p = avroFileReader.next();
                 assertThat(p.getPositionCount()).withFailMessage("Page Batch should be at least 3").isEqualTo(3);
-                //check first column
-                //check first column first row coerced struct
+                // check first column
+                // check first column first row coerced struct
                 RowBlock readStraightUpStringsOnly = (RowBlock) p.getBlock(0).getSingleValueBlock(0);
                 assertThat(readStraightUpStringsOnly.getFieldBlocks()).hasSize(3); // tag, int and string block fields
                 assertThat(readStraightUpStringsOnly.getFieldBlocks().get(1).isNull(0)).isTrue(); // int field null
@@ -132,8 +132,8 @@ public class TestHiveAvroTypeBlockHandler
 
                 // check first column third row is null
                 assertThat(p.getBlock(0).isNull(2)).isTrue();
-                //check second column
-                //check second column first row coerced struct
+                // check second column
+                // check second column first row coerced struct
                 RowBlock readFromReverseStringsOnly = (RowBlock) p.getBlock(1).getSingleValueBlock(0);
                 assertThat(readFromReverseStringsOnly.getFieldBlocks()).hasSize(3); // tag, int and string block fields
                 assertThat(readFromReverseStringsOnly.getFieldBlocks().get(1).isNull(0)).isTrue(); // int field null
@@ -146,8 +146,8 @@ public class TestHiveAvroTypeBlockHandler
                 // check second column third row is null
                 assertThat(p.getBlock(1).isNull(2)).isTrue();
 
-                //check third column (default of 42 always)
-                //check third column first row coerced struct
+                // check third column (default of 42 always)
+                // check third column first row coerced struct
                 RowBlock readFromDefaultStringsOnly = (RowBlock) p.getBlock(2).getSingleValueBlock(0);
                 assertThat(readFromDefaultStringsOnly.getFieldBlocks()).hasSize(3); // tag, int and string block fields
                 assertThat(readFromDefaultStringsOnly.getFieldBlocks().get(2).isNull(0)).isTrue(); // string field null
