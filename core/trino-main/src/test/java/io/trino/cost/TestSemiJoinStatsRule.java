@@ -35,18 +35,18 @@ public class TestSemiJoinStatsRule
                 .build();
 
         tester().assertStatsFor(pb -> {
-            Symbol a = pb.symbol("a", DOUBLE);
-            Symbol b = pb.symbol("b", DOUBLE);
-            Symbol c = pb.symbol("c", DOUBLE);
-            Symbol semiJoinOutput = pb.symbol("sjo", BOOLEAN);
-            return pb
-                    .semiJoin(pb.values(a, b),
-                            pb.values(c),
-                            a,
-                            c,
-                            semiJoinOutput,
-                            Optional.empty());
-        })
+                    Symbol a = pb.symbol("a", DOUBLE);
+                    Symbol b = pb.symbol("b", DOUBLE);
+                    Symbol c = pb.symbol("c", DOUBLE);
+                    Symbol semiJoinOutput = pb.symbol("sjo", BOOLEAN);
+                    return pb
+                            .semiJoin(pb.values(a, b),
+                                    pb.values(c),
+                                    a,
+                                    c,
+                                    semiJoinOutput,
+                                    Optional.empty());
+                })
                 .withSourceStats(0, PlanNodeStatsEstimate.builder()
                         .setOutputRowCount(10)
                         .addSymbolStatistics(new Symbol(DOUBLE, "a"), stats)
