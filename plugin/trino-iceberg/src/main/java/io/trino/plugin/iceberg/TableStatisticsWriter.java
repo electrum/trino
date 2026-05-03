@@ -126,19 +126,19 @@ public class TableStatisticsWriter
         Schema schema = table.schemas().get(snapshot.schemaId());
         Set<Integer> validFieldIds = stream(
                 Traverser.forTree((Types.NestedField nestedField) -> {
-                    Type type = nestedField.type();
-                    if (type instanceof Type.NestedType nestedType) {
-                        return nestedType.fields();
-                    }
-                    if (type instanceof Types.VariantType) {
-                        return ImmutableList.of();
-                    }
-                    if (type instanceof Type.PrimitiveType) {
-                        return ImmutableList.of();
-                    }
-                    throw new IllegalArgumentException("Unrecognized type for field %s: %s".formatted(nestedField, type));
-                })
-                .depthFirstPreOrder(schema.columns()))
+                            Type type = nestedField.type();
+                            if (type instanceof Type.NestedType nestedType) {
+                                return nestedType.fields();
+                            }
+                            if (type instanceof Types.VariantType) {
+                                return ImmutableList.of();
+                            }
+                            if (type instanceof Type.PrimitiveType) {
+                                return ImmutableList.of();
+                            }
+                            throw new IllegalArgumentException("Unrecognized type for field %s: %s".formatted(nestedField, type));
+                        })
+                        .depthFirstPreOrder(schema.columns()))
                 .map(Types.NestedField::fieldId)
                 .collect(toImmutableSet());
 
