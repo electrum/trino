@@ -18,5 +18,5 @@ import io.trino.spi.connector.ConnectorTransactionHandle;
 public enum ExampleTransactionHandle
         implements ConnectorTransactionHandle
 {
-    INSTANCE
+    INSTANCE,
 }

@@ -18,5 +18,5 @@ import io.trino.spi.connector.ConnectorPartitioningHandle;
 public enum BlackHolePartitioningHandle
         implements ConnectorPartitioningHandle
 {
-    INSTANCE
+    INSTANCE,
 }

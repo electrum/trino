@@ -56,7 +56,7 @@ public class LokiConnector
     public enum LokiTransactionHandle
             implements ConnectorTransactionHandle
     {
-        INSTANCE
+        INSTANCE,
     }
 
     @Override

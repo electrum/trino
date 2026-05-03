@@ -18,5 +18,5 @@ import io.trino.spi.connector.ConnectorTransactionHandle;
 public enum CassandraTransactionHandle
         implements ConnectorTransactionHandle
 {
-    INSTANCE
+    INSTANCE,
 }

@@ -18,5 +18,5 @@ import io.trino.spi.connector.ConnectorTransactionHandle;
 public enum RedisTransactionHandle
         implements ConnectorTransactionHandle
 {
-    INSTANCE
+    INSTANCE,
 }

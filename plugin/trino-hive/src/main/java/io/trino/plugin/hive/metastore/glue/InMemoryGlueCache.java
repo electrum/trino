@@ -65,7 +65,7 @@ class InMemoryGlueCache
 {
     private enum Global
     {
-        GLOBAL
+        GLOBAL,
     }
 
     private record PartitionKey(String databaseName, String tableName, PartitionName partitionName) {}

@@ -18,5 +18,5 @@ import io.trino.spi.connector.ConnectorPartitioningHandle;
 public enum DeltaLakeUpdateHandle
         implements ConnectorPartitioningHandle
 {
-    INSTANCE
+    INSTANCE,
 }
