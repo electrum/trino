@@ -108,7 +108,7 @@ public class TestDynamicTable
                  AND(("OriginCityName") != 'catfish paradise', ("OriginState") != 'az', ("AirTime") BETWEEN '1' AND '5', "AirTime" NOT IN ('7', '8', '9')),\
                  AND(("DepDelayMinutes") < '10', ("Distance") >= '3', ("ArrDelay") > '4', ("SecurityDelay") < '5', ("LateAircraftDelay") <= '7'))\
                  LIMIT 60\
-                 """.formatted(tableName);
+                """.formatted(tableName);
         DynamicTable dynamicTable = buildFromPql(pinotMetadata, new SchemaTableName("default", query), mockClusterInfoFetcher, TESTING_TYPE_CONVERTER);
         assertThat(extractPql(dynamicTable, TupleDomain.all())).isEqualTo(expected);
     }
@@ -204,8 +204,7 @@ public class TestDynamicTable
         DynamicTable dynamicTable = buildFromPql(pinotMetadata, new SchemaTableName("default", query), mockClusterInfoFetcher, TESTING_TYPE_CONVERTER);
         PinotColumnHandle columnHandle = new PinotColumnHandle("OriginCityName", VARCHAR);
         TupleDomain<ColumnHandle> tupleDomain = TupleDomain.withColumnDomains(ImmutableMap.of(
-                columnHandle,
-                Domain.create(ValueSet.ofRanges(Range.equal(VARCHAR, Slices.utf8Slice("Catfish Paradise"))), false)));
+                columnHandle, Domain.create(ValueSet.ofRanges(Range.equal(VARCHAR, Slices.utf8Slice("Catfish Paradise"))), false)));
         String expectedPql =
                 """
                 SELECT "FlightNum"\
@@ -400,7 +399,7 @@ public class TestDynamicTable
                 SELECT plus("ArrDelay", '34') - "DaysSinceEpoch", "FlightNum"\
                  FROM %s\
                  ORDER BY "ArrDelay", "DaysSinceEpoch" DESC\
-                 LIMIT 10""".formatted(tableNameWithSuffix);
+                LIMIT 10""".formatted(tableNameWithSuffix);
         assertThat(extractPql(dynamicTable, TupleDomain.all())).isEqualTo(expectedPql);
         assertThat(dynamicTable.tableName()).isEqualTo(tableName);
     }
@@ -417,7 +416,7 @@ public class TestDynamicTable
                 SELECT count(*)\
                  FROM %s\
                  ORDER BY count(*)\
-                 LIMIT 10""".formatted(tableNameWithSuffix);
+                LIMIT 10""".formatted(tableNameWithSuffix);
         assertThat(extractPql(dynamicTable, TupleDomain.all())).isEqualTo(expectedPql);
         assertThat(dynamicTable.tableName()).isEqualTo(tableName);
     }
@@ -434,7 +433,7 @@ public class TestDynamicTable
                 SELECT plus("ArrDelay", '34') - "DaysSinceEpoch", "FlightNum"\
                  FROM %s\
                  ORDER BY plus("ArrDelay", '34') - "DaysSinceEpoch" DESC\
-                 LIMIT 10""".formatted(tableNameWithSuffix);
+                LIMIT 10""".formatted(tableNameWithSuffix);
         assertThat(extractPql(dynamicTable, TupleDomain.all())).isEqualTo(expectedPql);
         assertThat(dynamicTable.tableName()).isEqualTo(tableName);
     }
@@ -454,7 +453,7 @@ public class TestDynamicTable
                 """
                 SELECT "non_quoted" AS "non""quoted"\
                  FROM %s\
-                 LIMIT 50""".formatted(tableNameWithSuffix);
+                LIMIT 50""".formatted(tableNameWithSuffix);
         assertThat(extractPql(dynamicTable, TupleDomain.all())).isEqualTo(expectedPql);
         assertThat(dynamicTable.tableName()).isEqualTo(tableName);
     }
@@ -474,7 +473,7 @@ public class TestDynamicTable
                 """
                 SELECT "qu""ot""ed"\
                  FROM %s\
-                 LIMIT 50""".formatted(tableNameWithSuffix);
+                LIMIT 50""".formatted(tableNameWithSuffix);
         assertThat(extractPql(dynamicTable, TupleDomain.all())).isEqualTo(expectedPql);
         assertThat(dynamicTable.tableName()).isEqualTo(tableName);
     }
