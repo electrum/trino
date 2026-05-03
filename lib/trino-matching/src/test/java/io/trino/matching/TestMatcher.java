@@ -92,9 +92,9 @@ public class TestMatcher
 
         assertMatch(pattern, new ProjectNode(new ScanNode("t")));
         assertNoMatch(pattern, new ScanNode("t"));
-        //TODO this needs a custom Option type to work , or NPEs will happen.
-        //Optional does not allow null values.
-        //assertNoMatch(pattern, new ProjectNode(null));
+        // TODO this needs a custom Option type to work , or NPEs will happen.
+        // Optional does not allow null values.
+        // assertNoMatch(pattern, new ProjectNode(null));
         assertNoMatch(pattern, new ProjectNode(new ProjectNode(null)));
     }
 
