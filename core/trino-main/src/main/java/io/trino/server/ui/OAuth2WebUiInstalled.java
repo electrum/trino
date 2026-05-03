@@ -15,5 +15,5 @@ package io.trino.server.ui;
 
 public enum OAuth2WebUiInstalled
 {
-    INSTANCE
+    INSTANCE,
 }

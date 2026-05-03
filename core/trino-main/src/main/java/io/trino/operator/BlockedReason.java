@@ -15,5 +15,5 @@ package io.trino.operator;
 
 public enum BlockedReason
 {
-    WAITING_FOR_MEMORY
+    WAITING_FOR_MEMORY,
 }

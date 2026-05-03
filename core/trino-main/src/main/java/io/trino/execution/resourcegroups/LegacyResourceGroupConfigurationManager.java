@@ -31,7 +31,7 @@ public class LegacyResourceGroupConfigurationManager
 {
     enum VoidContext
     {
-        NONE
+        NONE,
     }
 
     private static final ResourceGroupId GLOBAL = new ResourceGroupId("global");

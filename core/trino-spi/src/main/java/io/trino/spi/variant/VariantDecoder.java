@@ -112,7 +112,7 @@ public final class VariantDecoder
     public enum PrimitiveLayout
             implements VariantLayout
     {
-        PRIMITIVE
+        PRIMITIVE,
     }
 
     public record ArrayLayout(

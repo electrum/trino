@@ -18,5 +18,5 @@ import io.trino.spi.connector.ConnectorIndexHandle;
 public enum TestingConnectorIndexHandle
         implements ConnectorIndexHandle
 {
-    INSTANCE
+    INSTANCE,
 }

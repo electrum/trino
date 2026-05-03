@@ -19,5 +19,5 @@ import io.trino.spi.connector.ConnectorOutputTableHandle;
 public enum TestingHandle
         implements ConnectorOutputTableHandle, ConnectorInsertTableHandle
 {
-    INSTANCE
+    INSTANCE,
 }

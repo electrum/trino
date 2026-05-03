@@ -397,7 +397,7 @@ public class TestSpoolingExchangeOutputBuffer
     private enum TestingExchangeSinkInstanceHandle
             implements ExchangeSinkInstanceHandle
     {
-        INSTANCE
+        INSTANCE,
     }
 
     private static class TestingLocalMemoryContext
