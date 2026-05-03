@@ -314,7 +314,7 @@ public class TestShowQueries
                         ) AS
                         SELECT cola_ test_column
                         FROM
-                          mock_table""");
+                        mock_table""");
     }
 
     @Test
