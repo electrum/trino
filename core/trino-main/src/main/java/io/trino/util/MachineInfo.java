@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 import static com.google.common.base.Suppliers.memoize;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -43,6 +44,7 @@ public final class MachineInfo
     private static final Splitter KEY_VALUE_SPLITTER = Splitter.on(':')
             .limit(2)
             .trimResults();
+    private static final Pattern ROOT_CGROUP_PATTERN = Pattern.compile("\\d+:[^:]*:/");
 
     // cache physical processor count, so that it's not queried multiple times during tests
     private static final Supplier<Integer> PHYSICAL_PROCESSOR_COUNT = memoize(MachineInfo::readAvailablePhysicalProcessorCount);
@@ -66,18 +68,29 @@ public final class MachineInfo
         String osName = StandardSystemProperty.OS_NAME.value();
         // logical core count (including container cpu quota if there is any)
         int availableProcessorCount = Runtime.getRuntime().availableProcessors();
-        int totalPhysicalProcessorCount;
         if ("Linux".equals(osName) && "amd64".equals(osArch)) {
-            totalPhysicalProcessorCount = readLinuxPhysicalProcessorCount()
-                    .orElse(availableProcessorCount);
+            return calculateAvailablePhysicalProcessorCount(
+                    availableProcessorCount,
+                    hasOnlyRootCgroups(),
+                    readLinuxSmtActive(),
+                    MachineInfo::readLinuxPhysicalProcessorCount);
         }
-        else {
-            // Fallback to logical processor count when physical core topology is not available.
-            totalPhysicalProcessorCount = availableProcessorCount;
+
+        return availableProcessorCount;
+    }
+
+    static int calculateAvailablePhysicalProcessorCount(
+            int availableProcessorCount,
+            boolean linuxHasOnlyRootCgroups,
+            Optional<Boolean> linuxSmtActive,
+            Supplier<Optional<Integer>> linuxPhysicalProcessorCount)
+    {
+        if (!linuxHasOnlyRootCgroups || linuxSmtActive.equals(Optional.of(false))) {
+            return availableProcessorCount;
         }
 
         // cap available processor count to container cpu quota (if there is any).
-        return min(totalPhysicalProcessorCount, availableProcessorCount);
+        return min(linuxPhysicalProcessorCount.get().orElse(availableProcessorCount), availableProcessorCount);
     }
 
     private static Set<String> readCpuFlagsInternal()
@@ -93,6 +106,39 @@ public final class MachineInfo
     {
         return readLines(Path.of("/proc/cpuinfo"))
                 .flatMap(MachineInfo::parseLinuxPhysicalProcessorCount);
+    }
+
+    private static Optional<Boolean> readLinuxSmtActive()
+    {
+        return readLines(Path.of("/sys/devices/system/cpu/smt/active"))
+                .flatMap(lines -> lines.stream()
+                        .findFirst()
+                        .flatMap(MachineInfo::parseLinuxSmtActive));
+    }
+
+    static Optional<Boolean> parseLinuxSmtActive(String value)
+    {
+        return switch (value.trim()) {
+            case "0" -> Optional.of(false);
+            case "1" -> Optional.of(true);
+            default -> Optional.empty();
+        };
+    }
+
+    private static boolean hasOnlyRootCgroups()
+    {
+        return readLines(Path.of("/proc/self/cgroup"))
+                .map(MachineInfo::hasOnlyRootCgroups)
+                .orElse(false);
+    }
+
+    static boolean hasOnlyRootCgroups(List<String> cgroupLines)
+    {
+        List<String> nonBlankLines = cgroupLines.stream()
+                .filter(not(String::isBlank))
+                .toList();
+        return !nonBlankLines.isEmpty() && nonBlankLines.stream()
+                .allMatch(line -> ROOT_CGROUP_PATTERN.matcher(line).matches());
     }
 
     static Optional<Integer> parseLinuxPhysicalProcessorCount(List<String> cpuInfoLines)
