@@ -1,0 +1,25 @@
+name: check-commit-messages
+description: Check commit description wrapping and attribution trailers
+
+inputs:
+  base_ref:
+    description: Git base ref
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Test commit message checker
+      shell: bash
+      run: python3 "${{ github.action_path }}/test_check.py"
+    - name: Check commit messages
+      shell: bash
+      env:
+        BASE_REF: ${{ inputs.base_ref }}
+      run: |
+        if [[ ! "$BASE_REF" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+          echo "Invalid pull request base ref: $BASE_REF" >&2
+          exit 1
+        fi
+        python3 "${{ github.action_path }}/check.py" \
+          "origin/${BASE_REF}..HEAD"

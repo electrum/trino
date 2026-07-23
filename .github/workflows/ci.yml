@@ -51,6 +51,14 @@ jobs:
       docs: ${{ steps.filter.outputs.docs }}
       non_docs: ${{ steps.filter.outputs.non_docs }}
     steps:
+      - uses: actions/checkout@v7.0.0
+        if: github.event_name == 'pull_request'
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/check-commit-messages
+        if: github.event_name == 'pull_request'
+        with:
+          base_ref: ${{ github.event.pull_request.base.ref }}
       - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4
         id: filter
         if: github.event_name == 'pull_request'
