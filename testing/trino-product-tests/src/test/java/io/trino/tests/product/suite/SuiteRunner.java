@@ -13,6 +13,7 @@
  */
 package io.trino.tests.product.suite;
 
+import io.airlift.log.Format;
 import io.trino.testing.containers.environment.EnvironmentManager;
 import io.trino.testing.containers.environment.ProductTestEnvironment;
 import org.junit.jupiter.api.Tag;
@@ -33,9 +34,15 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.TimeZone;
+import java.util.logging.ConsoleHandler;
+import java.util.logging.Formatter;
+import java.util.logging.Handler;
+import java.util.logging.Logger;
 
 import static java.util.Objects.requireNonNull;
+import static java.util.logging.Level.WARNING;
 
 /**
  * Utility class for running JUnit tests programmatically with environment lifecycle management.
@@ -118,6 +125,15 @@ public final class SuiteRunner
         // Legacy launcher forced this timezone for all product test JVM executions.
         TimeZone.setDefault(TimeZone.getTimeZone(ZoneId.of(PRODUCT_TESTS_TIME_ZONE)));
         System.setProperty("user.timezone", PRODUCT_TESTS_TIME_ZONE);
+
+        // Configure console logging.
+        Formatter formatter = Format.TEXT.createFormatter(Map.of());
+        for (Handler handler : Logger.getLogger("").getHandlers()) {
+            if (handler instanceof ConsoleHandler) {
+                handler.setFormatter(formatter);
+            }
+        }
+        Logger.getLogger("org.testcontainers.images.LoggedPullImageResultCallback").setLevel(WARNING);
 
         String includeExpr = String.join(" & ", includeTags);
         String excludeExpr = String.join(" | ", excludeTags);
